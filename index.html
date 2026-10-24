@@ -77,9 +77,7 @@ h3{font-size:17px;margin-bottom:6px}
 /* 記帳 */
 .xf>label,.xl{display:block;font-weight:800;font-size:14px;margin-top:12px}
 .xf>label:first-child{margin-top:0}
-.xf input:not([type=radio]){display:block;width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:6px 10px;margin-top:4px}
-.xrate{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:#6b6462;margin-top:8px}
-.xrate input{display:inline-block!important;width:84px!important;margin:0!important;padding:2px 8px!important;font-size:14px!important}
+.xf input:not([type=radio]),.xf select{display:block;width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:6px 10px;margin-top:4px}
 .xbtn{display:block;width:100%;margin-top:14px;font:inherit;font-weight:800;color:var(--ink);border:3px solid var(--ink);border-radius:999px;padding:6px;background:var(--leaf);cursor:pointer}
 .xbtn.xcancel{background:var(--paper);margin-top:8px}
 .xd{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 12px;font-weight:800;margin:18px 6px 0}
@@ -510,7 +508,7 @@ function render() {
   const sum = S.budget.reduce((s, r) => s + (Number(r.amt) || 0), 0);
   $('#prep').innerHTML = `<h2>🎒 準備</h2>${S.prep.map(prepHTML).join('')}${addBtn('cat,-1', '新增大項目')}<h2>💵 預算</h2><div class="card"><h3>預算明細（雙人，台幣）</h3>${S.budget.map(budgetHTML).join('')}${addBtn('bud,-1', '新增預算項目')}</div><div class="card total"><small>預估總金額（台幣）</small><b>${fmt(sum)}</b></div>`;
   showDay(dayIdx);
-  applyEdit(); tick();
+  applyEdit(); tick(); fillDates();
 }
 function showDay(i, scroll) {
   const d = data.days[i], box = $('#dayBody');
@@ -699,18 +697,23 @@ $('#dlg').addEventListener('click', async e => {
 });
 
 // ================= 旅行記帳 =================
-let exp = [], xEdit = null, xDirty = false, rate = 0.21;
-try { exp = JSON.parse(localStorage.getItem('trip-exp') || '[]') || []; rate = parseFloat(localStorage.getItem('trip-rate')) || 0.21; } catch (e) {}
+let exp = [], xEdit = null;
+try { exp = JSON.parse(localStorage.getItem('trip-exp') || '[]') || []; } catch (e) {}
 const saveExp = () => { try { localStorage.setItem('trip-exp', JSON.stringify(exp)); } catch (e) {} };
 const X = id => document.getElementById(id);
 const xmsg = t => { const m = X('xmsg'); if (m) m.textContent = t; };
 const yen = n => '¥' + fmt(n), twd = n => 'NT$ ' + fmt(n);
 const num = s => { const v = parseFloat(String(s).replace(/[^\d.]/g, '')); return isNaN(v) ? 0 : v; };
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-function defDate() { // 旅程期間內預設今天，否則預設第一天
-  const D = data.days; if (!D.length) return todayStr();
-  const a = ymd(D[0].mo, D[0].d), b = ymd(D[D.length - 1].mo, D[D.length - 1].d), t = todayStr();
-  return t >= a && t <= b ? t : a;
+function defDate() { // 今天在旅程裡就選今天，否則選第一天
+  const v = data.days.map(d => ymd(d.mo, d.d));
+  return v.includes(todayStr()) ? todayStr() : (v[0] || todayStr());
+}
+function fillDates() { // 日期選單 = 行程裡的每一天，行程有增減時會跟著更新
+  const el = X('xd'); if (!el) return;
+  const cur = el.value, opts = data.days.map(d => [ymd(d.mo, d.d), `${d.mo}/${d.d}(${d.w})`]);
+  el.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  el.value = opts.some(o => o[0] == cur) ? cur : defDate();
 }
 async function xPut(r) {
   if (!fb) return xmsg('已記在這支手機（尚未設定雲端同步）');
@@ -723,30 +726,29 @@ async function xDel(id) {
   catch (e) { xmsg(e.code == 'permission-denied' ? '雲端不允許刪除記帳：請到 Firebase 更新 Firestore 規則' : '同步失敗，已先在這支手機刪除'); }
 }
 function xReset() {
-  xEdit = null; xDirty = false;
+  xEdit = null;
   X('xj').value = X('xt').value = X('xn').value = '';
   X('xsub').textContent = '＋ 新增記帳'; X('xcan').hidden = true;
 }
 $('#exp').innerHTML = `<h2>🧾 旅行記帳</h2>
 <form class="card xf" id="xf" autocomplete="off">
-<label>日期<input type="date" id="xd" required></label>
-<label>日幣 ¥<input id="xj" inputmode="numeric" placeholder="花了多少日幣"></label>
-<label>台幣 NT$<input id="xt" inputmode="numeric" placeholder="台幣金額（可自己輸入）"></label>
-<div class="xrate">自動估算：1 日幣 ≈ <input id="xr" inputmode="decimal" aria-label="匯率"> 台幣（只在台幣留空時幫你算）</div>
-<label>品項名稱<input id="xn" placeholder="例如：午餐拉麵" maxlength="60" required></label>
+<label>日期<select id="xd"></select></label>
 <div class="xl">付款方式</div>
 <div class="chk"><label style="--c:var(--leaf)"><input type="radio" name="pay" value="現金" checked>現金</label><label style="--c:var(--aqua)"><input type="radio" name="pay" value="刷卡">刷卡</label></div>
+<label>品項名稱<input id="xn" placeholder="例如：午餐拉麵" maxlength="60" required></label>
+<label>日幣 ¥（當下的日幣金額）<input id="xj" inputmode="numeric" placeholder="例如 1200"></label>
+<label>台幣 NT$（刷卡實際扣款）<input id="xt" inputmode="numeric" placeholder="例如 252，沒有就留空"></label>
 <p class="mut" id="xmsg"></p>
 <button type="submit" class="xbtn" id="xsub">＋ 新增記帳</button>
 <button type="button" class="xbtn xcancel" id="xcan" hidden>取消修改</button>
 </form><div id="xlist"></div>`;
-X('xd').value = defDate(); X('xr').value = rate;
-X('xj').addEventListener('input', () => { if (!xDirty) { const j = num(X('xj').value); X('xt').value = j ? Math.round(j * rate) : ''; } });
-X('xt').addEventListener('input', () => { xDirty = X('xt').value.trim() !== ''; });
-X('xr').addEventListener('input', () => {
-  const r = parseFloat(X('xr').value); if (!(r > 0)) return;
-  rate = r; try { localStorage.setItem('trip-rate', String(r)); } catch (e) {}
-  if (!xDirty) X('xj').dispatchEvent(new Event('input'));
+fillDates();
+// 點「記帳」直接跳過去，不要慢慢滑
+document.querySelector('nav a[href="#exp"]').addEventListener('click', e => {
+  e.preventDefault();
+  const root = document.documentElement, prev = root.style.scrollBehavior;
+  root.style.scrollBehavior = 'auto'; X('exp').scrollIntoView(); root.style.scrollBehavior = prev;
+  try { history.replaceState(null, '', '#exp'); } catch (x) {}
 });
 X('xcan').onclick = () => { xReset(); xmsg(''); };
 X('xf').addEventListener('submit', e => {
@@ -764,7 +766,8 @@ $('#xlist').addEventListener('click', e => {
   const b = e.target.closest('[data-x]'); if (!b) return;
   const [a, id] = b.dataset.x.split(','), r = exp.find(x => x.id == id); if (!r) return;
   if (a == 'd') { if (!confirm(`刪除「${r.name}」這筆記帳嗎？`)) return; exp = exp.filter(x => x.id != id); saveExp(); renderExp(); xDel(id); return; }
-  xEdit = id; xDirty = !!r.twd;
+  xEdit = id;
+  if (![...X('xd').options].some(o => o.value == r.d)) X('xd').insertAdjacentHTML('beforeend', `<option value="${esc(r.d)}">${esc(r.d)}</option>`);
   X('xd').value = r.d; X('xj').value = r.jpy || ''; X('xt').value = r.twd || ''; X('xn').value = r.name;
   document.querySelector(`#xf input[name=pay][value="${r.pay}"]`).checked = true;
   X('xsub').textContent = '💾 儲存修改'; X('xcan').hidden = false; xmsg('正在修改這一筆');
@@ -775,12 +778,11 @@ function renderExp() {
   if (!exp.length) { L.innerHTML = '<div class="card ctr mut">還沒有記帳紀錄，記下第一筆吧！</div>'; return; }
   const sum = (a, k) => a.reduce((s, x) => s + (Number(x[k]) || 0), 0);
   const by = {}; exp.forEach(x => (by[x.d] = by[x.d] || []).push(x));
-  const pay = p => exp.filter(x => x.pay == p);
   const amt = x => [x.jpy ? yen(x.jpy) : '', x.twd ? twd(x.twd) : ''].filter(Boolean).join('　');
-  L.innerHTML = `<div class="card total"><small>目前總花費</small><b>${yen(sum(exp, 'jpy'))}</b><b class="sm">${twd(sum(exp, 'twd'))}</b><p class="mut">現金　${yen(sum(pay('現金'), 'jpy'))}／${twd(sum(pay('現金'), 'twd'))}<br>刷卡　${yen(sum(pay('刷卡'), 'jpy'))}／${twd(sum(pay('刷卡'), 'twd'))}</p></div>`
+  L.innerHTML = `<div class="card total"><small>目前總花費（日幣）</small><b>${yen(sum(exp, 'jpy'))}</b></div>`
     + Object.keys(by).sort().reverse().map(d => {
       const a = by[d].slice().sort((p, q) => q.ts - p.ts), [y, m, dd] = d.split('-').map(Number);
-      return `<div class="xd"><span>${m}/${dd}（${WD[new Date(y, m - 1, dd).getDay()]}）</span><span>${yen(sum(a, 'jpy'))}　${twd(sum(a, 'twd'))}</span></div><div class="card xc">${a.map(x => `<div class="xe"><div class="xi"><div class="xn">${esc(x.name)} <span class="tag" style="--c:var(--${x.pay == '刷卡' ? 'aqua' : 'leaf'})">${esc(x.pay)}</span></div><div class="xa">${esc(amt(x))}</div></div><button class="eb" type="button" data-x="e,${esc(x.id)}" aria-label="修改">✎</button><button class="eb" type="button" data-x="d,${esc(x.id)}" aria-label="刪除">✕</button></div>`).join('')}</div>`;
+      return `<div class="xd"><span>${m}/${dd}（${WD[new Date(y, m - 1, dd).getDay()]}）</span><span>${yen(sum(a, 'jpy'))}</span></div><div class="card xc">${a.map(x => `<div class="xe"><div class="xi"><div class="xn">${esc(x.name)} <span class="tag" style="--c:var(--${x.pay == '刷卡' ? 'aqua' : 'leaf'})">${esc(x.pay)}</span></div><div class="xa">${esc(amt(x))}</div></div><button class="eb" type="button" data-x="e,${esc(x.id)}" aria-label="修改">✎</button><button class="eb" type="button" data-x="d,${esc(x.id)}" aria-label="刪除">✕</button></div>`).join('')}</div>`;
     }).join('');
 }
 renderExp();
