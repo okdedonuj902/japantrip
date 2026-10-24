@@ -335,48 +335,52 @@ function seed() {
 }
 
 // ================= 資料、儲存、同步 =================
-let data = null, dayIdx = 0, edit = false, user = null, fb = null, cloudHas = null, statusMsg = '';
+let data = null, dayIdx = 0, edit = false, fb = null, pending = null, statusMsg = '';
 try { data = JSON.parse(localStorage.getItem('trip-data') || 'null'); edit = localStorage.getItem('trip-edit') == '1'; } catch (e) {}
 if (!data || !Array.isArray(data.days)) data = seed();
 
 const saveLocal = () => { try { localStorage.setItem('trip-data', JSON.stringify(data)); } catch (e) {} };
-const setStatus = t => { statusMsg = t; $('#st').textContent = t; };
-const canEdit = () => !FIREBASE.projectId ? true : !!user;
-function applyEdit() { document.body.classList.toggle('edit', edit && canEdit()); }
+const setStatus = t => { statusMsg = t; $('#st').textContent = t; const s = $('#sst'); if (s) s.textContent = t; };
+function applyEdit() { document.body.classList.toggle('edit', edit); }
 
 async function push() {
   if (!fb) return setStatus('已存在這支手機（尚未設定雲端同步）');
   try {
-    await fb.setDoc(fb.ref, { json: JSON.stringify(data), updatedAt: Date.now(), by: user ? user.email : '' });
+    await fb.setDoc(fb.ref, { json: JSON.stringify(data), updatedAt: Date.now() });
     setStatus('已儲存並同步 ✓');
   } catch (e) {
-    setStatus(e.code == 'permission-denied' ? '沒有權限：請先到 ⚙️ 設定登入編輯帳號' : '同步失敗，已先存在這支手機');
+    setStatus(e.code == 'permission-denied' ? '雲端不允許寫入：請檢查 Firestore 的「規則」是否已改成允許寫入' : '同步失敗，已先存在這支手機');
   }
 }
+// 收到雲端更新時，如果正在編輯表單就先擱著，避免把還沒存的修改蓋掉
+function applyRemote(d) {
+  const dlg = $('#dlg');
+  if (dlg.open && dlg.dataset.k == 'form') { pending = d; return; }
+  data = d; saveLocal(); render();
+}
+$('#dlg').addEventListener('close', () => { if (pending) { const d = pending; pending = null; applyRemote(d); } });
 async function commit(focus) {
   data.days.sort((a, b) => a.mo * 100 + a.d - (b.mo * 100 + b.d));
   data.days.forEach((d, i) => d.n = i + 1);
   if (focus) dayIdx = Math.max(0, data.days.indexOf(focus));
   data.flights.sort((a, b) => (a.date + a.t1).localeCompare(b.date + b.t1));
-  saveLocal(); render(); await push();
+  pending = null; saveLocal(); render(); await push();
 }
 
 async function initCloud() {
   if (!FIREBASE.projectId || !FIREBASE.apiKey) return setStatus('尚未設定雲端同步，修改只會存在這支手機');
   try {
     const V = '10.12.2', base = `https://www.gstatic.com/firebasejs/${V}/`;
-    const [{ initializeApp }, { getFirestore, doc, setDoc, onSnapshot }, A] = await Promise.all([
-      import(base + 'firebase-app.js'), import(base + 'firebase-firestore.js'), import(base + 'firebase-auth.js')]);
+    const [{ initializeApp }, { getFirestore, doc, setDoc, onSnapshot }] = await Promise.all([
+      import(base + 'firebase-app.js'), import(base + 'firebase-firestore.js')]);
     const app = initializeApp(FIREBASE), db = getFirestore(app);
-    fb = { ref: doc(db, 'trips', 'main'), setDoc, A, auth: A.getAuth(app) };
-    A.onAuthStateChanged(fb.auth, u => { user = u; applyEdit(); if (u && cloudHas === false) push(); if ($('#dlg').open && $('#dlg').dataset.k == 'set') openSettings(); });
+    fb = { ref: doc(db, 'trips', 'main'), setDoc };
     onSnapshot(fb.ref, snap => {
       if (snap.metadata.hasPendingWrites) return;
-      if (!snap.exists()) { cloudHas = false; if (user) push(); return setStatus('雲端還沒有資料，登入後會自動上傳目前行程'); }
-      cloudHas = true;
-      try { const d = JSON.parse(snap.data().json); if (d && Array.isArray(d.days)) { data = d; saveLocal(); render(); } } catch (e) {}
+      if (!snap.exists()) { setStatus('雲端還沒有資料，正在上傳目前的行程…'); return push(); }
+      try { const d = JSON.parse(snap.data().json); if (d && Array.isArray(d.days)) applyRemote(d); } catch (e) {}
       setStatus('已與雲端同步 · ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }));
-    }, () => setStatus('目前離線，顯示上次的內容'));
+    }, e => setStatus(e && e.code == 'permission-denied' ? '雲端不允許讀取：請檢查 Firestore 的「規則」' : '目前離線，顯示上次的內容'));
   } catch (e) { setStatus('雲端載入失敗，顯示這支手機上的資料'); }
 }
 
@@ -537,10 +541,8 @@ function openSettings() {
   const dlg = $('#dlg'); dlg.dataset.k = 'set';
   const cloud = !!FIREBASE.projectId;
   dlg.innerHTML = `<h3>⚙️ 設定</h3><p class="note" id="sst">${esc(statusMsg)}</p>
-${cloud ? (user ? `<p class="note">已登入：${esc(user.email)}</p><div class="bar"><button class="no" type="button" data-s="logout">登出</button></div>`
-    : `<label>編輯帳號（Email）<input id="em" type="email" autocomplete="username"></label><label>密碼<input id="pw" type="password" autocomplete="current-password"></label><div class="bar"><button type="button" data-s="login">登入</button></div><p class="note" id="lerr">只有要編輯時才需要登入；只看行程不用登入。</p>`)
-  : '<p class="note">尚未設定雲端同步，目前可直接編輯，但修改只存在這支手機。</p>'}
-<label class="sw"><input type="checkbox" id="edsw"${edit && canEdit() ? ' checked' : ''}${canEdit() ? '' : ' disabled'}>編輯模式</label>
+${cloud ? '' : '<p class="note">尚未設定雲端同步，目前可直接編輯，但修改只存在這支手機。</p>'}
+<label class="sw"><input type="checkbox" id="edsw"${edit ? ' checked' : ''}>編輯模式</label>
 <p class="note">開啟後，行程各處會出現「✎」和「＋」按鈕。</p>
 <div class="bar"><button class="no" type="button" data-s="export">匯出備份</button><button class="no" type="button" data-s="import">匯入備份</button></div>
 <div class="bar"><button class="del" type="button" data-s="reset">重設為初始行程</button><button type="button" data-s="close">關閉</button></div>
@@ -557,11 +559,6 @@ $('#dlg').addEventListener('change', e => {
 $('#dlg').addEventListener('click', async e => {
   const s = e.target.dataset && e.target.dataset.s; if (!s) return;
   if (s == 'close') $('#dlg').close();
-  if (s == 'logout') await fb.A.signOut(fb.auth);
-  if (s == 'login') {
-    try { await fb.A.signInWithEmailAndPassword(fb.auth, $('#em').value.trim(), $('#pw').value); }
-    catch (x) { const m = $('#lerr'); if (m) m.textContent = '登入失敗，請確認 Email 和密碼。'; }
-  }
   if (s == 'export') {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
