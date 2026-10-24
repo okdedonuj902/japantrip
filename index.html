@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#FFFCF6">
+<title>東京旅遊</title>
+<style>
+:root{--paper:#FFFCF6;--ink:#3E3A39;--coral:#F2A497;--sun:#F6D27A;--aqua:#A8D3E6;--leaf:#B9DAA5;color-scheme:light}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth;scroll-padding-top:calc(76px + env(safe-area-inset-top,0px))}
+body{background:var(--paper);color:var(--ink);font:16px/1.65 "Microsoft JhengHei","微軟正黑體","PingFang TC","Noto Sans TC",sans-serif;padding-bottom:env(safe-area-inset-bottom,0px)}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+button{font:inherit;color:var(--ink);cursor:pointer}
+nav{position:fixed;top:0;left:0;right:0;z-index:9;display:flex;gap:8px;justify-content:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:var(--paper);border-bottom:3px solid var(--ink)}
+nav a{flex:1;max-width:110px;text-align:center;padding:5px 0;border:3px solid var(--ink);border-radius:999px;color:var(--ink);text-decoration:none;font-weight:800;background:var(--paper)}
+nav a.on{background:var(--c)}
+#gear{flex:none;width:44px;border:3px solid var(--ink);border-radius:999px;background:var(--paper);font-size:18px;line-height:1;padding:0}
+body.edit #gear{background:var(--sun)}
+main{max-width:720px;margin:0 auto;padding:calc(76px + env(safe-area-inset-top,0px)) 14px 28px}
+.card{background:var(--paper);border:3px solid var(--ink);border-radius:26px;padding:16px;box-shadow:0 4px 0 var(--ink);margin:14px 0}
+h1{font-size:28px;line-height:1.3;text-align:center;margin:12px 0 2px}
+h2{font-size:22px;margin:28px 4px 0}
+h3{font-size:17px;margin-bottom:6px}
+.sub,.ctr{text-align:center}.sub{font-weight:700}
+.mut{color:#6b6462;font-size:13px;line-height:1.5;margin-top:3px}
+.hero svg{display:block;width:100%;height:auto;border:3px solid var(--ink);border-radius:20px}
+.cd{display:flex;gap:8px;margin:12px 0 4px}
+.cd div{flex:1;border:3px solid var(--ink);border-radius:18px;padding:4px 0;text-align:center;background:var(--c);font-weight:700}
+.cd b{display:block;font-size:28px;line-height:1.3}
+.tk .tkh{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.tkh .mut{margin:0 0 0 auto}
+.pill,.tag{display:inline-block;border:2px solid var(--ink);border-radius:999px;padding:0 10px;font-size:13px;font-weight:800;background:var(--c)}
+.tag{margin:6px 6px 0 0;padding:0 9px;font-size:12px}
+.fl{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;text-align:center;gap:6px;line-height:1.4}
+.fl b{font-size:26px}
+.ar hr{border:0;border-top:3px dashed var(--ink);width:56px;margin:4px 0}
+.kv{display:flex;align-items:flex-start;gap:12px;padding:7px 0;border-bottom:2px dotted var(--ink)}
+.kv:last-child{border:0}
+.kv .k{font-weight:800;flex:none}
+.kv .v{margin-left:auto;text-align:right;overflow-wrap:anywhere}
+.kv.sub{padding-left:18px}
+.pl{display:inline-block;margin:8px 8px 0 0;padding:1px 11px;border:3px solid var(--ink);border-radius:999px;background:var(--aqua);color:var(--ink);font-size:13px;font-weight:700;text-decoration:none}
+.pl.lk{background:var(--sun)}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:12px 4px 8px;scroll-snap-type:x proximity}
+.tab{flex:none;min-width:62px;scroll-snap-align:center;border:3px solid var(--ink);border-radius:18px;background:var(--paper);padding:4px 10px;text-align:center;line-height:1.3}
+.tab small{display:block;font-size:12px}
+.tab.on{background:var(--sun);animation:pop .5s cubic-bezier(.3,1.7,.5,1)}
+.dh{margin-top:6px;font-weight:800;background:var(--leaf)}
+.tl{list-style:none;padding:0;margin-top:18px}
+.tl li{position:relative;padding:0 0 16px 92px;animation:drop .55s cubic-bezier(.3,1.5,.5,1) both;animation-delay:calc(var(--i)*60ms)}
+.tl li::before{content:"";position:absolute;left:65px;top:10px;width:14px;height:14px;border:3px solid var(--ink);border-radius:50%;background:var(--c);z-index:1}
+.tl li::after{content:"";position:absolute;left:70px;top:24px;bottom:-10px;border-left:3px solid var(--ink)}
+.tl li:last-child::after{display:none}
+.t{position:absolute;left:0;width:56px;text-align:right;font-weight:800;font-size:14px;line-height:1.3;padding-top:7px}
+.t small{display:block;font-weight:400;color:#6b6462;font-size:12px}
+.b{border:3px solid var(--ink);border-radius:18px;padding:9px 12px;background:var(--paper);overflow-wrap:anywhere}
+.ti{font-weight:800}
+.total{background:var(--coral);text-align:center;font-weight:800;font-size:18px}
+footer{text-align:center;padding:10px 0 30px}
+/* 編輯模式 */
+.ed{display:none!important}
+body.edit .ed{display:inline-flex!important}
+body.edit .tab.ed,body.edit .add.ed{display:block!important}
+.eb{border:2px solid var(--ink);border-radius:999px;background:var(--sun);font-size:12px;font-weight:800;padding:0 10px;margin-left:6px;line-height:1.7}
+.ctl{justify-content:flex-end;gap:6px;margin-bottom:4px}
+.ctl .eb{margin:0}
+.add{width:100%;margin-top:10px;border:3px dashed var(--ink);border-radius:18px;background:var(--paper);padding:6px;font-weight:800}
+.tab.add{width:auto;margin:0;flex:none}
+/* 對話框 */
+dialog{border:3px solid var(--ink);border-radius:26px;background:var(--paper);color:var(--ink);padding:16px;width:min(92vw,520px);max-height:88vh;overflow:auto;box-shadow:0 4px 0 var(--ink);margin:auto}
+dialog::backdrop{background:rgba(62,58,57,.45)}
+dialog label{display:block;font-weight:800;font-size:14px;margin-top:10px}
+dialog input:not([type=checkbox]),dialog textarea,dialog select{display:block;width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:6px 10px;margin-top:4px}
+dialog textarea{min-height:68px;resize:vertical}
+.chk{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chk label{position:relative;margin:0;border:3px solid var(--ink);border-radius:999px;padding:2px 12px;font-weight:700;cursor:pointer}
+.chk input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.chk label:has(input:checked){background:var(--c)}
+.chk label:has(:focus-visible){outline:3px solid var(--ink);outline-offset:3px}
+.bar{display:flex;gap:8px;margin-top:16px}
+.bar button{flex:1;font-weight:800;border:3px solid var(--ink);border-radius:999px;padding:5px;background:var(--leaf)}
+.bar .no{background:var(--paper)}.bar .del{background:var(--coral)}
+.sw{display:flex;align-items:center;gap:10px;margin-top:12px;font-weight:800}
+.sw input{width:22px;height:22px;accent-color:#3E3A39}
+.note{font-size:13px;color:#6b6462;margin-top:8px;line-height:1.5}
+@keyframes pop{0%{transform:scale(.8)}55%{transform:scale(1.14)}100%{transform:scale(1)}}
+@keyframes drop{0%{transform:translateY(26px);opacity:0}60%{transform:translateY(-6px);opacity:1}100%{transform:none;opacity:1}}
+@keyframes drift{from{transform:translateX(-50px)}to{transform:translateX(420px)}}
+@keyframes roll{from{transform:translateX(-150px)}to{transform:translateX(420px)}}
+@keyframes bob{50%{transform:translateY(-6px)}}
+@keyframes float{50%{transform:translateX(14px)}}
+.plane{animation:drift 15s linear infinite}
+.train{animation:roll 10s linear infinite}
+.sun{animation:bob 4s ease-in-out infinite}
+.cloud{animation:float 7s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<nav aria-label="主選單">
+<a href="#flight" style="--c:var(--aqua)">航班</a>
+<a href="#days" style="--c:var(--coral)">行程</a>
+<a href="#prep" style="--c:var(--leaf)">準備</a>
+<button id="gear" type="button" aria-label="設定">⚙️</button>
+</nav>
+<main>
+<section id="top">
+<div class="card hero">
+<svg viewBox="0 0 360 240" role="img" aria-label="繪本風插圖：富士山、東京鐵塔、新幹線與飛機" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+<rect width="360" height="240" fill="#FFFCF6" stroke="none"/>
+<g class="sun"><circle cx="56" cy="52" r="24" fill="#F2A497"/></g>
+<g class="cloud"><path d="M80 52a10 10 0 0 1 4-19a14 14 0 0 1 26-2a11 11 0 0 1 8 21z" fill="#FFFCF6" transform="translate(40 8)"/></g>
+<g class="plane"><g transform="translate(0 24)"><ellipse cx="20" cy="0" rx="20" ry="7" fill="#FFFCF6"/><path d="M14-3L8-15H17L28-3z" fill="#F2A497"/><path d="M2-4L-3-12H5L10-4z" fill="#A8D3E6"/><circle cx="30" cy="-1" r="1.5" fill="#3E3A39"/></g></g>
+<path d="M40 188L150 66L260 188z" fill="#A8D3E6"/>
+<path d="M120 100L150 66L180 100L164 94L150 106L136 94z" fill="#FFFCF6"/>
+<path d="M262 188L290 56L318 188z" fill="#F2A497"/>
+<path d="M290 56V34M274 150H306" fill="none"/>
+<rect x="278" y="104" width="24" height="9" rx="3" fill="#F6D27A"/>
+<rect x="283" y="78" width="14" height="8" rx="3" fill="#F6D27A"/>
+<path d="M0 184Q70 156 140 182T290 178T360 186V240H0z" fill="#B9DAA5"/>
+<path d="M0 230H360" fill="none" stroke-dasharray="10 7"/>
+<g class="train"><g transform="translate(0 202)"><rect width="64" height="24" rx="12" fill="#F6D27A"/><rect x="68" width="64" height="24" rx="12" fill="#FFFCF6"/><g fill="#A8D3E6" stroke-width="2"><circle cx="18" cy="10" r="4"/><circle cx="32" cy="10" r="4"/><circle cx="46" cy="10" r="4"/><circle cx="86" cy="10" r="4"/><circle cx="100" cy="10" r="4"/><circle cx="114" cy="10" r="4"/></g></g></g>
+</svg>
+<h1 id="h1">東京旅遊</h1>
+<p class="sub" id="sub"></p>
+<div class="cd" id="cd"></div>
+<p class="ctr mut">出發倒數</p>
+</div>
+</section>
+<section id="flight"></section>
+<section id="days"></section>
+<section id="prep"></section>
+<footer><p class="mut" id="st"></p></footer>
+</main>
+<dialog id="dlg"></dialog>
+
+<script type="module">
+// ★ 建立好 Firebase 專案後，把「專案設定 → 您的應用程式」裡的 firebaseConfig 貼在這裡。
+//   留空的話，網站仍可編輯，但修改只會存在這支手機的瀏覽器。
+const FIREBASE = { apiKey: "", authDomain: "", projectId: "", appId: "" };
+
+// 初始行程（第一次開啟、雲端還沒有資料時使用；之後都以網頁上的編輯為準）
+const EMBED = `【✈️航班與機票資訊】
+・航空公司：SCOOT 酷航（波音 B787-9）
+・刷卡優惠：聯邦銀行 M 卡
+・機票費用：NT$ 31,986
+・座位及行李費用：NT$ 2,098
+・行李托運額度：
+- 去程：兩人共享 40 kg
+- 回程：兩人共享 60 kg
+・去程航班 (TR866)：01/20 (三) 06:50 桃園 T1 ➔ 10:55 成田 T1（航程 3 小時 05 分）
+・回程航班 (TR875)：01/27 (三) 19:45 成田 T1 ➔ 22:55 桃園 T1（航程 4 小時 10 分）
+【🚗 桃園機場停車附註】
+・停車場名稱：嘟嘟房中正機場外圍停車場（非航廈內）
+・連絡電話：03-3989898
+・優惠與費用計算：
+- 免費天數：信用卡權益免費 6 天
+- 超天數費用：第 7~8 天適用嘟嘟房卡友優惠價 NT$ 250 / 天
+- 停車預算：共停 8 天（6 天免費 + 2 天自費）＝ NT$ 500
+【🏨 飯店住宿資訊】
+・飯店名稱：APA飯店 - 八丁堀站南 (APA Hotel Hatchobori-Eki-Minami)
+・住宿天數：7 晚
+・住宿費用：NT$ 18,910 (JPY 91,947)
+【🗓️ 每日詳細行程規劃】
+■ 01月20日 (三) Day 1：抵達東京 ➔ 銀座/日本橋散步
+04:00 - 04:30　抵達嘟嘟房機場外圍停車場停車，搭乘接駁車至桃園機場 T1
+06:50 - 10:55　搭乘酷航 TR866 抵達成田機場 T1
+11:45 - 13:15　搭乘京成 Skyliner（至日暮里轉乘 JR）前往八丁堀飯店辦理 Check-in 及寄放行李
+14:00 - 18:00　銀座自由逛街與購物（OK 超市、Uniqlo 旗艦店、GU、塩麵包屋 pain･maison 銀座店）
+18:30 - 20:00　晚餐：日本橋炸豬排 HAJIME (日本橋 とんかつ ハジメ)
+■ 01月21日 (四) Day 2：東京迪士尼樂園 (Tokyo Disneyland)
+全天：東京迪士尼樂園
+交通方式：從飯店步行至八丁堀站，搭乘 JR 京葉線直達舞濱站（車程約 12 分鐘）
+■ 01月22日 (五) Day 3：東京迪士尼海洋 (Tokyo DisneySea)
+全天：東京迪士尼海洋
+交通方式：八丁堀站搭乘 JR 京葉線至舞濱站，轉乘迪士尼單軌電車前往迪士尼海洋
+■ 01月23日 (六) Day 4：富士山·箱根一日遊
+07:30 - 07:50　從八丁堀搭乘 JR 京葉線至東京站（約 2 分鐘）或搭乘計程車前往集合點
+08:00 集合發車　集合地點：JR 東京站前 新丸之內大樓 BEAMS 標牌下
+訂單編號：RXQ262381
+行程連結：https://s.klook.com/c/4yVQ5N4py6
+全天：富士山 & 箱根一日遊（Klook 專車接送）
+■ 01月24日 (日) Day 5：木更津 Outlet 購物 ➔ 上野 ➔ 麻布台之丘
+09:00 - 09:30　從八丁堀前往東京車站八重洲口巴士總站
+10:00 - 15:00　三井 Outlet Park 木更津 爆買購物與午餐（搭乘直達高速巴士，單程約 45 分鐘）
+16:00 - 18:30　上野：Yamashiroya 六層樓玩具店
+19:00 - 21:00　麻布台之丘：觀賞夜景與晚餐
+■ 01月25日 (一) Day 6：Workman 購物日 ➔ 池袋 Sunshine City
+09:15 - 09:30　從 APA Hotel Hatchobori Ekiminami 步行至八丁堀站
+10:10 - 11:40　抵達 Mega Sports - Beans Akabane（八丁堀站 搭乘「東京地鐵日比谷線」（往北）➔ 上野站（車程 12 分鐘）➔站內轉乘「JR 京濱東北線」（往北）➔ 赤羽站（車程 15 分鐘）➔北剪票口出站，步行 3 分鐘至 Beans 赤羽。）
+11:45 - 12:45　在 JR 赤羽站周邊 享用午餐。赤羽站內有 Beans 美食街，站外西口與東口也有非常多平價日式料理與餐廳。
+13:30 - 15:00　WORKMAN Pro 板橋前野本通り店（至赤羽站西口巴士站 3號月台➔搭乘「國際興業巴士【赤53】」（往常盤台站方向）➔於 「前野町三丁目」 站下車（車程 12 分鐘），步行 6 分鐘到店。）
+15:45 - 17:30　WORKMAN Plus 練馬北町店（步行 6 分鐘回 「前野町三丁目」 巴士站➔搭乘「國際興業巴士【赤53】」至終點站 常盤台站（ときわ台駅）（車程 5 分鐘）➔轉乘「東武東上線（各站停車）」➔ 下赤塚站（車程 9 分鐘）➔出站步行約 11 分鐘即達。）
+17:00 - 17:30　回飯店(從店鋪步行約 5 分鐘至東京地鐵 「地下鐵赤塚站」➔搭乘「東京地鐵有樂町線」（往新木場方向），免轉車直達「新富町站」（車程 36 分鐘）➔ 4號出口出站，提著戰利品步行 7 分鐘輕鬆走回飯店。
+■ 01月26日 (二) Day 7：輕井澤一日小團
+全天：輕井澤精緻小團（Klook 9人小團）
+行程連結：https://s.klook.com/c/Vwep_BQnXJ
+行程景點：白絲瀑布 (白糸の滝)、雲場池、舊輕井澤銀座通 / 輕井澤王子購物廣場 (Outlet)
+■ 01月27日 (三) Day 8：烏森神社參拜 ➔ 返台
+09:30 - 11:30　烏森神社參拜（祈求工作運、健康抗癌）
+11:30 - 14:30　東京車站地下街午餐、最後補貨與採買伴手禮
+15:00 - 16:00　搭乘 Skyliner / N'EX 特快前往成田機場 T1
+16:00　抵達成田機場 T1 辦理報到手續
+19:45 - 22:55　搭乘酷航 TR875 返回桃園機場 T1
+23:35　取車返家（搭乘嘟嘟房接駁車至外圍停車場取車）
+【💵 預算費用估算表 (雙人總計)】
+1. 酷航機票：NT$ 31,986（2 人來回票價，聯邦 M 卡支付）
+2. 座位及行李：NT$ 2,098（去程 40kg / 回程 60kg）
+3. esim：NT$ 848（5G 全網通 三大電信 吃到飽不降速 8天）
+4. APA 飯店八丁堀站南：NT$ 18,910（7 晚住宿 JPY 91,947）
+5. 餐食費用：NT$ 15,000 ~ $18,000（預算一天兩人約 2,000~2,500 元，含日本橋 HAJIME 豬排）
+6. 迪士尼樂園門票：NT$ 8,800（2 人連玩 2 天，共 4 張一日票）
+7. 富士山·箱根一日遊：NT$ 2,781（Klook 雙人費用，訂單：RXQ262381）
+8. 輕井澤 9 人團一日遊：NT$ 5,500（Klook 雙人團費）
+9. 機場停車費用：NT$ 500（嘟嘟房外圍停車場：6天免費 + 2天卡友優惠價 $250/天）
+10. 日本當地交通預算：NT$ 4,500（機場來回、木更津巴士、Workman計程車、地鐵及JR IC卡）
+11. 旅平險：NT$1,500
+【預估總金額】：約 NT$ 97,920 ~ （雙人合計所有行程費用）`;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const RM = matchMedia('(prefers-reduced-motion: reduce)');
+const COL = ['coral','sun','aqua','leaf'];
+const WD = '日一二三四五六';
+const lines = s => String(s || '').split(/\n/).map(x => x.trim()).filter(Boolean);
+const mapUrl = q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+const chip = (l, q) => `<a class="pl" href="${mapUrl(q || l)}" target="_blank" rel="noopener">📍 ${esc(l)}</a>`;
+
+// 交通方式標籤
+const TG = { plane: ['飛機','aqua'], train: ['電車','coral'], bus: ['巴士／專車','leaf'], walk: ['步行','sun'], taxi: ['計程車','sun'] };
+const TRE = { plane: /酷航|航班|TR\d+/, train: /JR|地鐵|電車|京葉線|Skyliner|N'EX|單軌|京成|東武|線/, bus: /巴士|接駁|專車|公車/, walk: /步行/, taxi: /計程車/ };
+
+// ================= 初始資料：把上面的文字轉成可編輯的資料 =================
+const DICT = [
+  [/[成咸]田/, '成田機場 T1', 'Narita Airport Terminal 1'], [/桃園/, '桃園機場 T1', 'Taoyuan International Airport Terminal 1'],
+  [/嘟嘟房/, '嘟嘟房停車場', '嘟嘟房中正機場外圍停車場'], [/APA|飯店/, 'APA 八丁堀站南', 'APA Hotel Hatchobori Ekiminami'],
+  [/迪士尼樂園/, '東京迪士尼樂園', 'Tokyo Disneyland'], [/迪士尼海洋/, '東京迪士尼海洋', 'Tokyo DisneySea'],
+  [/HAJIME/, '日本橋炸豬排 HAJIME', '日本橋 とんかつ ハジメ'], [/銀座/, '銀座', 'Ginza Tokyo'],
+  [/東京(車)?站/, '東京車站', 'Tokyo Station'], [/木更津/, '木更津 Outlet', 'Mitsui Outlet Park Kisarazu'],
+  [/Yamashiroya/i, 'Yamashiroya 上野', 'Yamashiroya Ueno'], [/麻布台/, '麻布台之丘', 'Azabudai Hills'],
+  [/烏森/, '烏森神社', 'Karasumori Shrine'], [/赤羽/, '赤羽站', 'Akabane Station']
+];
+function split(s) {
+  let d = 0, h = '', c = '', ps = [];
+  for (const ch of s) {
+    if ('（('.includes(ch)) { if (d++ == 0) { c = ''; continue; } }
+    else if ('）)'.includes(ch)) { if (--d == 0) { ps.push(c); continue; } if (d < 0) d = 0; }
+    if (d > 0) c += ch; else h += ch;
+  }
+  if (d > 0 && c) ps.push(c);
+  return { h, ps };
+}
+const splitList = s => s.split(/、|\s\/\s/).map(x => x.trim()).filter(Boolean);
+function rowOf(l0) {
+  const sub = /^[-–]\s/.test(l0), l = l0.replace(/^[・•·]\s*|^[-–]\s+/, ''), i = l.search(/[：:]/);
+  return i < 0 ? { k: '', v: l, sub } : { k: l.slice(0, i).trim(), v: l.slice(i + 1).trim(), sub };
+}
+function flightOf(l) {
+  const m = l.replace(/^[・•·]\s*/, '').match(/^(.*航班)\s*[（(]\s*(\w+)\s*[）)]\s*[：:]\s*(\d+\/\d+)\s*[（(](.)[）)]\s*(\d\d:\d\d)\s*(.+?)\s*[➔→>-]+\s*(\d\d:\d\d)\s*(.+?)\s*(?:[（(]\s*(.+?)\s*[）)])?$/);
+  return m && { dir: m[1].replace('航班', ''), no: m[2], date: m[3], w: m[4], t1: m[5], from: m[6], t2: m[7], to: m[8], dur: m[9] || '' };
+}
+function mk(a, b, txt) {
+  const parts = txt.split(/\u3000+/), { h, ps } = split(parts.shift() || '');
+  const it = { a, b: b || '', title: h.replace(/\s+/g, ' ').trim(), notes: parts.filter(Boolean), route: [], extra: [], links: [] };
+  ps.forEach(p => /➔|搭乘|步行|轉乘|車程/.test(p) ? it.route.push(p)
+    : /、/.test(p) && /逛|購物|景點/.test(h) ? it.extra.push(...splitList(p)) : it.notes.push(p));
+  return it;
+}
+function addItem(d, l) {
+  let m;
+  if (m = l.match(/^(\d\d:\d\d)(?:\s*[-–~]\s*(\d\d:\d\d))?\s*(.*)$/)) return d.items.push(mk(m[1], m[2], m[3]));
+  if (m = l.match(/^全天\s*[：:]\s*(.*)$/)) return d.items.push(mk('全天', '', m[1]));
+  const it = d.items[d.items.length - 1];
+  if (!it) return d.items.push(mk('全天', '', l));
+  if (m = l.match(/^行程景點\s*[：:]\s*(.*)$/)) return it.extra.push(...splitList(m[1]));
+  if (m = l.match(/https?:\/\/\S+/)) return it.links.push(m[0]);
+  it.notes.push(l);
+}
+function parse(raw) {
+  const S = { flights: [], info: [], hotel: [], parking: [], budget: [], total: '', extra: [], days: [] };
+  let k = '', day = null, ex = null;
+  for (let l of raw.replace(/\\(.)/g, '$1').replace(/咸田/g, '成田').split(/\r?\n/)) {
+    l = l.trim(); if (!l) continue;
+    let m;
+    if (m = l.match(/^【\s*(.+?)\s*】\s*[：:]?\s*(.*)$/)) {
+      const h = m[1];
+      k = /總金額/.test(h) ? 'total' : /停車/.test(h) ? 'parking' : /飯店|住宿/.test(h) ? 'hotel'
+        : /每日|行程/.test(h) ? 'days' : /預算|費用/.test(h) ? 'budget' : /航班|機票/.test(h) ? 'flight' : 'extra';
+      day = null;
+      if (k == 'total') S.total = m[2]; else if (k == 'extra') S.extra.push(ex = { h, rows: [] });
+      continue;
+    }
+    if (m = l.match(/^■\s*(\d+)月\s*(\d+)日\s*[（(](.)[）)]\s*Day\s*(\d+)\s*[：:]\s*(.+)$/i)) {
+      S.days.push(day = { mo: +m[1], d: +m[2], w: m[3], n: +m[4], title: m[5], items: [] }); continue;
+    }
+    if (day) { addItem(day, l); continue; }
+    if (k == 'flight') { const f = flightOf(l); f ? S.flights.push(f) : S.info.push(rowOf(l)); }
+    else if (k == 'hotel') S.hotel.push(rowOf(l));
+    else if (k == 'parking') S.parking.push(rowOf(l));
+    else if (k == 'budget') S.budget.push(rowOf(l.replace(/^\d+\.\s*/, '')));
+    else if (k == 'extra' && ex) ex.rows.push(rowOf(l));
+  }
+  return S;
+}
+const allText = it => [it.title, ...it.route, ...it.notes.filter(n => !/^(集合地點|訂單編號)/.test(n))].join(' ');
+function seedPlaces(it) {
+  const o = [], add = (l, q) => { if (!o.some(x => x.q == q)) o.push({ l, q }); };
+  DICT.forEach(([re, l, q]) => re.test(it.title) && add(l, q));
+  const ctx = o[0] ? o[0].q : '日本';
+  it.extra.forEach(s => add(s.replace(/\s*[（(].*?[）)]/g, ''), s.replace(/[（()）]/g, ' ') + ' ' + ctx));
+  it.notes.forEach(n => { const m = n.match(/^集合地點[：:]\s*(.+)/); if (m) add('集合地點', m[1]); });
+  if (!o.length) {
+    const t = it.title.replace(/^(抵達|前往)\s*/, '').split(/[：:]/).pop().trim();
+    if (t && t.length < 40 && !/^(搭乘|從|回|取車)|返家/.test(t)) add(t, t + ' 日本');
+  }
+  return o;
+}
+function seed() {
+  const S = parse(EMBED);
+  S.title = '2027東京旅遊'; S.year = 2027;
+  S.days.forEach(d => d.items.forEach(it => {
+    it.tags = Object.keys(TRE).filter(k => TRE[k].test(allText(it)));
+    it.places = seedPlaces(it); delete it.extra;
+  }));
+  return S;
+}
+
+// ================= 資料、儲存、同步 =================
+let data = null, dayIdx = 0, edit = false, user = null, fb = null, cloudHas = null, statusMsg = '';
+try { data = JSON.parse(localStorage.getItem('trip-data') || 'null'); edit = localStorage.getItem('trip-edit') == '1'; } catch (e) {}
+if (!data || !Array.isArray(data.days)) data = seed();
+
+const saveLocal = () => { try { localStorage.setItem('trip-data', JSON.stringify(data)); } catch (e) {} };
+const setStatus = t => { statusMsg = t; $('#st').textContent = t; };
+const canEdit = () => !FIREBASE.projectId ? true : !!user;
+function applyEdit() { document.body.classList.toggle('edit', edit && canEdit()); }
+
+async function push() {
+  if (!fb) return setStatus('已存在這支手機（尚未設定雲端同步）');
+  try {
+    await fb.setDoc(fb.ref, { json: JSON.stringify(data), updatedAt: Date.now(), by: user ? user.email : '' });
+    setStatus('已儲存並同步 ✓');
+  } catch (e) {
+    setStatus(e.code == 'permission-denied' ? '沒有權限：請先到 ⚙️ 設定登入編輯帳號' : '同步失敗，已先存在這支手機');
+  }
+}
+async function commit(focus) {
+  data.days.sort((a, b) => a.mo * 100 + a.d - (b.mo * 100 + b.d));
+  data.days.forEach((d, i) => d.n = i + 1);
+  if (focus) dayIdx = Math.max(0, data.days.indexOf(focus));
+  data.flights.sort((a, b) => (a.date + a.t1).localeCompare(b.date + b.t1));
+  saveLocal(); render(); await push();
+}
+
+async function initCloud() {
+  if (!FIREBASE.projectId || !FIREBASE.apiKey) return setStatus('尚未設定雲端同步，修改只會存在這支手機');
+  try {
+    const V = '10.12.2', base = `https://www.gstatic.com/firebasejs/${V}/`;
+    const [{ initializeApp }, { getFirestore, doc, setDoc, onSnapshot }, A] = await Promise.all([
+      import(base + 'firebase-app.js'), import(base + 'firebase-firestore.js'), import(base + 'firebase-auth.js')]);
+    const app = initializeApp(FIREBASE), db = getFirestore(app);
+    fb = { ref: doc(db, 'trips', 'main'), setDoc, A, auth: A.getAuth(app) };
+    A.onAuthStateChanged(fb.auth, u => { user = u; applyEdit(); if (u && cloudHas === false) push(); if ($('#dlg').open && $('#dlg').dataset.k == 'set') openSettings(); });
+    onSnapshot(fb.ref, snap => {
+      if (snap.metadata.hasPendingWrites) return;
+      if (!snap.exists()) { cloudHas = false; if (user) push(); return setStatus('雲端還沒有資料，登入後會自動上傳目前行程'); }
+      cloudHas = true;
+      try { const d = JSON.parse(snap.data().json); if (d && Array.isArray(d.days)) { data = d; saveLocal(); render(); } } catch (e) {}
+      setStatus('已與雲端同步 · ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }));
+    }, () => setStatus('目前離線，顯示上次的內容'));
+  } catch (e) { setStatus('雲端載入失敗，顯示這支手機上的資料'); }
+}
+
+// ================= 畫面 =================
+const eb = (a, label = '✎') => `<button class="eb ed" type="button" data-a="${a}" aria-label="編輯">${label}</button>`;
+const kvRows = (rows, sec) => rows.map((x, i) => (x.k
+  ? `<div class="kv${x.sub ? ' sub' : ''}"><span class="k">${esc(x.k)}</span><span class="v">${esc(x.v)}</span>${eb(`row,${sec},${i}`)}</div>`
+  : `<div class="kv"><span class="k"></span><span class="v mut">${esc(x.v)}</span>${eb(`row,${sec},${i}`)}</div>`)).join('');
+const addBtn = (a, t) => `<button class="add ed" type="button" data-a="${a}">＋ ${t}</button>`;
+const flightHTML = (f, i) => `<div class="card tk"><div class="tkh"><span class="pill" style="--c:var(--${/去/.test(f.dir) ? 'coral' : 'aqua'})">${esc(f.dir)}</span><b>${esc(f.no)}</b><span class="mut">${esc(f.date)}（${esc(f.w)}）</span>${eb('flight,' + i)}</div><div class="fl"><div><b>${esc(f.t1)}</b><br>${esc(f.from)}</div><div class="ar">✈️<hr></div><div><b>${esc(f.t2)}</b><br>${esc(f.to)}</div></div>${f.dur ? `<p class="mut ctr">${esc(f.dur)}</p>` : ''}</div>`;
+function budgetHTML(r, i) {
+  const m = r.v.match(/^(NT\$\s*[\d,]+(?:\s*~\s*\$?\s*[\d,]+)?)\s*(.*)$/);
+  if (!m) return kvRows([r], 'budget').replace(/row,budget,0/, `row,budget,${i}`);
+  const note = m[2].replace(/^[（(]|[）)]$/g, '');
+  return `<div class="kv"><span class="k">${esc(r.k)}${note ? `<small class="mut" style="display:block;font-weight:400">${esc(note)}</small>` : ''}</span><b class="v">${esc(m[1])}</b>${eb(`row,budget,${i}`)}</div>`;
+}
+function itemHTML(it, i, di) {
+  const tg = (it.tags || []).filter(k => TG[k]).map(k => `<span class="tag" style="--c:var(--${TG[k][1]})">${TG[k][0]}</span>`).join('');
+  const pl = (it.places || []).map(p => chip(p.l, p.q)).join('');
+  const lk = (it.links || []).map(u => `<a class="pl lk" href="${esc(u)}" target="_blank" rel="noopener">🔗 行程連結</a>`).join('');
+  return `<li style="--i:${i};--c:var(--${COL[i % 4]})"><div class="t">${esc(it.a || '全天')}${it.b ? `<small>${esc(it.b)}</small>` : ''}</div><div class="b"><div class="ctl ed"><button class="eb" type="button" data-a="mv,${di},${i},-1" aria-label="上移">↑</button><button class="eb" type="button" data-a="mv,${di},${i},1" aria-label="下移">↓</button><button class="eb" type="button" data-a="item,${di},${i}">✎ 編輯</button></div><div class="ti">${esc(it.title)}</div>${tg ? `<div>${tg}</div>` : ''}${(it.route || []).map(r => `<p class="mut">🧭 ${esc(r)}</p>`).join('')}${(it.notes || []).map(n => `<p class="mut">${esc(n)}</p>`).join('')}<div>${pl}${lk}</div></div></li>`;
+}
+const nameOf = r => r && r.v.replace(/[（(].*/, '').trim();
+
+function render() {
+  const S = data, D = S.days;
+  if (dayIdx >= D.length) dayIdx = 0;
+  document.title = S.title;
+  $('#h1').innerHTML = esc(S.title) + eb('title');
+  const L = D[D.length - 1];
+  $('#sub').textContent = D.length ? `${D[0].mo}/${D[0].d}（${D[0].w}）→ ${L.mo}/${L.d}（${L.w}）· ${D.length} 天` : '';
+  const hn = S.hotel.find(r => /名稱/.test(r.k)), pn = S.parking.find(r => /名稱/.test(r.k));
+  $('#flight').innerHTML = `<h2>✈️ 航班</h2>${S.flights.map(flightHTML).join('')}${addBtn('flight,-1', '新增航班')}<div class="card"><h3>機票資訊</h3>${kvRows(S.info, 'info')}${addBtn('row,info,-1', '新增項目')}</div><h2>🏨 住宿</h2><div class="card">${kvRows(S.hotel, 'hotel')}${hn ? chip(nameOf(hn), hn.v.replace(/[（()）]/g, ' ')) : ''}${addBtn('row,hotel,-1', '新增項目')}</div>`;
+  $('#days').innerHTML = `<h2>🗓️ 每日行程</h2><div class="tabs" role="tablist" aria-label="選擇日期">${D.map((d, i) => `<button class="tab" type="button" role="tab" data-i="${i}"><b>${d.mo}/${d.d}</b><small>${d.w} · D${d.n}</small></button>`).join('')}<button class="tab add ed" type="button" data-a="day,-1">＋ 一天</button></div><div id="dayBody"></div>`;
+  $('#prep').innerHTML = `<h2>🎒 準備</h2><div class="card"><h3>🚗 機場停車</h3>${kvRows(S.parking, 'parking')}${pn ? chip(nameOf(pn), nameOf(pn)) : ''}${addBtn('row,parking,-1', '新增項目')}</div><div class="card"><h3>💵 預算（雙人）</h3>${S.budget.map(budgetHTML).join('')}${addBtn('row,budget,-1', '新增項目')}</div><div class="card total">預估總金額　${esc((S.total || '').replace(/^約\s*/, '約 '))}${eb('total')}</div>${S.extra.map((e, n) => `<div class="card"><h3>${esc(e.h)}${eb('xedit,' + n)}</h3>${kvRows(e.rows, 'extra:' + n)}${addBtn(`row,extra:${n},-1`, '新增項目')}</div>`).join('')}${addBtn('xedit,-1', '新增一個區塊')}`;
+  showDay(dayIdx);
+  applyEdit(); tick();
+}
+function showDay(i, scroll) {
+  const d = data.days[i], box = $('#dayBody');
+  if (!d) { box.innerHTML = '<div class="card">還沒有行程。開啟編輯模式後，按「＋ 一天」新增。</div>'; return; }
+  dayIdx = i;
+  document.querySelectorAll('.tab[data-i]').forEach((t, j) => { t.classList.toggle('on', j == i); t.setAttribute('aria-selected', j == i); });
+  box.innerHTML = `<div class="card dh">Day ${d.n}　${esc(d.title)}${eb('day,' + i)}</div><ul class="tl">${d.items.map((it, j) => itemHTML(it, j, i)).join('')}</ul>${addBtn(`item,${i},-1`, '新增行程')}`;
+  const on = document.querySelector('.tab.on');
+  if (scroll && on) on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: RM.matches ? 'auto' : 'smooth' });
+}
+
+let t0 = null;
+function tick() {
+  const el = $('#cd'), f = data.flights[0];
+  t0 = f ? new Date(`${data.year || 2027}-${f.date.replace('/', '-')}T${f.t1}:00+08:00`) : null;
+  if (!t0 || isNaN(t0)) { el.innerHTML = ''; return; }
+  const s = Math.floor((t0 - Date.now()) / 1000);
+  if (s <= 0) { el.innerHTML = '<p class="ctr" style="width:100%"><b>旅程進行中，玩得開心！</b></p>'; return; }
+  el.innerHTML = [[Math.floor(s / 86400), '天'], [Math.floor(s % 86400 / 3600), '時'], [Math.floor(s % 3600 / 60), '分']]
+    .map(([n, u], i) => `<div style="--c:var(--${['coral','sun','aqua'][i]})"><b>${n}</b>${u}</div>`).join('');
+}
+setInterval(tick, 15000);
+
+// ================= 編輯表單 =================
+function fieldHTML(f, v) {
+  if (f.t == 'area') return `<label>${f.label}<textarea name="${f.k}">${esc(v)}</textarea></label>`;
+  if (f.t == 'tags') return `<label>${f.label}</label><div class="chk">${Object.keys(TG).map(k => `<label style="--c:var(--${TG[k][1]})"><input type="checkbox" name="${f.k}" value="${k}"${(v || []).includes(k) ? ' checked' : ''}>${TG[k][0]}</label>`).join('')}</div>`;
+  if (f.t == 'sel') return `<label>${f.label}<select name="${f.k}">${f.opts.map(o => `<option${o == v ? ' selected' : ''}>${o}</option>`).join('')}</select></label>`;
+  return `<label>${f.label}<input name="${f.k}" type="${f.t || 'text'}" value="${esc(v)}"></label>`;
+}
+function openForm(title, fields, vals, onSave, onDel) {
+  const dlg = $('#dlg'); dlg.dataset.k = 'form';
+  dlg.innerHTML = `<form><h3>${esc(title)}</h3>${fields.map(f => fieldHTML(f, vals[f.k])).join('')}<div class="bar"><button class="no" type="button" id="fno">取消</button>${onDel ? '<button class="del" type="button" id="fdel">刪除</button>' : ''}<button type="submit">儲存</button></div></form>`;
+  const form = dlg.querySelector('form');
+  form.onsubmit = e => {
+    e.preventDefault();
+    const fd = new FormData(form), v = {};
+    fields.forEach(f => v[f.k] = f.t == 'tags' ? fd.getAll(f.k) : (fd.get(f.k) || '').toString().trim());
+    dlg.close(); onSave(v);
+  };
+  $('#fno').onclick = () => dlg.close();
+  if (onDel) $('#fdel').onclick = () => { if (confirm('確定要刪除嗎？')) { dlg.close(); onDel(); } };
+  dlg.showModal();
+}
+const ymd = (mo, d) => `${data.year || 2027}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+const fromYmd = s => { const [y, m, d] = s.split('-').map(Number); return { mo: m, d, w: WD[new Date(y, m - 1, d).getDay()] }; };
+const secRows = sec => sec.startsWith('extra:') ? data.extra[+sec.slice(6)].rows : data[sec];
+
+const act = {
+  title() { openForm('旅程名稱', [{ k: 'title', label: '名稱' }], { title: data.title }, v => { data.title = v.title || data.title; data.year = +(data.title.match(/20\d\d/) || [data.year])[0]; commit(); }); },
+  total() { openForm('預估總金額', [{ k: 'total', label: '內容' }], { total: data.total }, v => { data.total = v.total; commit(); }); },
+  flight(i) {
+    i = +i; const f = i < 0 ? { dir: '去程', no: '', date: '01/20', w: '', t1: '', from: '', t2: '', to: '', dur: '' } : data.flights[i];
+    const [mo, d] = f.date.split('/').map(Number);
+    openForm(i < 0 ? '新增航班' : '編輯航班', [
+      { k: 'dir', label: '方向', t: 'sel', opts: ['去程', '回程', '轉機'] }, { k: 'no', label: '航班編號' },
+      { k: 'date', label: '日期', t: 'date' }, { k: 't1', label: '起飛時間', t: 'time' }, { k: 'from', label: '出發地' },
+      { k: 't2', label: '抵達時間', t: 'time' }, { k: 'to', label: '目的地' }, { k: 'dur', label: '航程說明（選填）' }
+    ], { ...f, date: ymd(mo, d) }, v => {
+      const dt = v.date ? fromYmd(v.date) : { mo, d, w: f.w };
+      const nf = { dir: v.dir, no: v.no, date: `${String(dt.mo).padStart(2, '0')}/${String(dt.d).padStart(2, '0')}`, w: dt.w, t1: v.t1, from: v.from, t2: v.t2, to: v.to, dur: v.dur };
+      i < 0 ? data.flights.push(nf) : data.flights[i] = nf; commit();
+    }, i < 0 ? null : () => { data.flights.splice(i, 1); commit(); });
+  },
+  row(sec, i) {
+    i = +i; const rows = secRows(sec), r = i < 0 ? { k: '', v: '' } : rows[i];
+    openForm(i < 0 ? '新增項目' : '編輯項目', [{ k: 'k', label: '項目名稱' }, { k: 'v', label: '內容' }], r, v => {
+      i < 0 ? rows.push({ k: v.k, v: v.v }) : Object.assign(r, { k: v.k, v: v.v }); commit();
+    }, i < 0 ? null : () => { rows.splice(i, 1); commit(); });
+  },
+  xedit(n) {
+    n = +n; const e = n < 0 ? { h: '', rows: [] } : data.extra[n];
+    openForm(n < 0 ? '新增區塊' : '編輯區塊標題', [{ k: 'h', label: '區塊標題' }], e, v => {
+      if (!v.h) return; n < 0 ? data.extra.push({ h: v.h, rows: [] }) : e.h = v.h; commit();
+    }, n < 0 ? null : () => { data.extra.splice(n, 1); commit(); });
+  },
+  day(i) {
+    i = +i; const last = data.days[data.days.length - 1];
+    const d = i < 0 ? { mo: last ? last.mo : 1, d: last ? last.d + 1 : 1, title: '', items: [] } : data.days[i];
+    openForm(i < 0 ? '新增一天' : '編輯這一天', [{ k: 'date', label: '日期', t: 'date' }, { k: 'title', label: '當天主題' }],
+      { date: ymd(d.mo, d.d), title: d.title }, v => {
+        if (v.date) Object.assign(d, fromYmd(v.date));
+        d.title = v.title; if (i < 0) data.days.push(d); commit(d);
+      }, i < 0 ? null : () => { data.days.splice(i, 1); dayIdx = 0; commit(); });
+  },
+  item(di, i) {
+    di = +di; i = +i; const day = data.days[di];
+    const it = i < 0 ? { a: '', b: '', title: '', tags: [], route: [], places: [], notes: [], links: [] } : day.items[i];
+    openForm(i < 0 ? '新增行程' : '編輯行程', [
+      { k: 'a', label: '開始時間（留空 = 全天）', t: 'time' }, { k: 'b', label: '結束時間（選填）', t: 'time' },
+      { k: 'title', label: '標題' }, { k: 'tags', label: '交通方式', t: 'tags' },
+      { k: 'route', label: '路線說明（每行一則）', t: 'area' },
+      { k: 'places', label: '地點（每行一個，格式「名稱｜地圖搜尋字」，搜尋字可省略）', t: 'area' },
+      { k: 'notes', label: '備註（每行一則）', t: 'area' }, { k: 'links', label: '連結（每行一個網址）', t: 'area' }
+    ], {
+      a: it.a == '全天' ? '' : it.a, b: it.b, title: it.title, tags: it.tags || [],
+      route: (it.route || []).join('\n'), notes: (it.notes || []).join('\n'), links: (it.links || []).join('\n'),
+      places: (it.places || []).map(p => p.q == p.l ? p.l : `${p.l}｜${p.q}`).join('\n')
+    }, v => {
+      Object.assign(it, {
+        a: v.a || '全天', b: v.b, title: v.title, tags: v.tags, route: lines(v.route), notes: lines(v.notes), links: lines(v.links),
+        places: lines(v.places).map(s => { const [l, q] = s.split(/[｜|]/); return { l: l.trim(), q: (q || l).trim() }; })
+      });
+      if (i < 0) day.items.push(it); commit(day);
+    }, i < 0 ? null : () => { day.items.splice(i, 1); commit(day); });
+  },
+  mv(di, i, dir) {
+    di = +di; i = +i; dir = +dir; const a = data.days[di].items, j = i + dir;
+    if (j < 0 || j >= a.length) return;
+    [a[i], a[j]] = [a[j], a[i]]; commit(data.days[di]);
+  }
+};
+document.addEventListener('click', e => {
+  const t = e.target.closest('.tab[data-i]'); if (t) return showDay(+t.dataset.i, true);
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const [a, ...x] = b.dataset.a.split(','); act[a] && act[a](...x);
+});
+
+// ================= 設定 =================
+function openSettings() {
+  const dlg = $('#dlg'); dlg.dataset.k = 'set';
+  const cloud = !!FIREBASE.projectId;
+  dlg.innerHTML = `<h3>⚙️ 設定</h3><p class="note" id="sst">${esc(statusMsg)}</p>
+${cloud ? (user ? `<p class="note">已登入：${esc(user.email)}</p><div class="bar"><button class="no" type="button" data-s="logout">登出</button></div>`
+    : `<label>編輯帳號（Email）<input id="em" type="email" autocomplete="username"></label><label>密碼<input id="pw" type="password" autocomplete="current-password"></label><div class="bar"><button type="button" data-s="login">登入</button></div><p class="note" id="lerr">只有要編輯時才需要登入；只看行程不用登入。</p>`)
+  : '<p class="note">尚未設定雲端同步，目前可直接編輯，但修改只存在這支手機。</p>'}
+<label class="sw"><input type="checkbox" id="edsw"${edit && canEdit() ? ' checked' : ''}${canEdit() ? '' : ' disabled'}>編輯模式</label>
+<p class="note">開啟後，行程各處會出現「✎」和「＋」按鈕。</p>
+<div class="bar"><button class="no" type="button" data-s="export">匯出備份</button><button class="no" type="button" data-s="import">匯入備份</button></div>
+<div class="bar"><button class="del" type="button" data-s="reset">重設為初始行程</button><button type="button" data-s="close">關閉</button></div>
+<input type="file" id="imp" accept="application/json,.json" hidden>`;
+  if (!dlg.open) dlg.showModal();
+}
+$('#gear').onclick = openSettings;
+$('#dlg').addEventListener('change', e => {
+  if (e.target.id == 'edsw') { edit = e.target.checked; try { localStorage.setItem('trip-edit', edit ? '1' : '0'); } catch (x) {} applyEdit(); }
+  if (e.target.id == 'imp' && e.target.files[0]) e.target.files[0].text().then(t => {
+    try { const d = JSON.parse(t); if (!Array.isArray(d.days)) throw 0; data = d; commit(); $('#dlg').close(); } catch (x) { alert('這不是有效的備份檔'); }
+  });
+});
+$('#dlg').addEventListener('click', async e => {
+  const s = e.target.dataset && e.target.dataset.s; if (!s) return;
+  if (s == 'close') $('#dlg').close();
+  if (s == 'logout') await fb.A.signOut(fb.auth);
+  if (s == 'login') {
+    try { await fb.A.signInWithEmailAndPassword(fb.auth, $('#em').value.trim(), $('#pw').value); }
+    catch (x) { const m = $('#lerr'); if (m) m.textContent = '登入失敗，請確認 Email 和密碼。'; }
+  }
+  if (s == 'export') {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    a.download = 'tokyo-trip-backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  if (s == 'import') $('#imp').click();
+  if (s == 'reset' && confirm('確定要把所有內容換回初始行程嗎？目前的修改會被覆蓋。')) { data = seed(); dayIdx = 0; commit(); $('#dlg').close(); }
+});
+
+render();
+initCloud();
+if (!FIREBASE.projectId) setStatus('尚未設定雲端同步，修改只會存在這支手機');
+
+// 選單隨捲動高亮
+const links = [...document.querySelectorAll('nav a')];
+const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && links.forEach(a => a.classList.toggle('on', a.hash == '#' + e.target.id))), { rootMargin: '-35% 0px -60% 0px' });
+['flight', 'days', 'prep'].forEach(id => io.observe($('#' + id)));
+</script>
+</body>
+</html>
