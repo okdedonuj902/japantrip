@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light">
 <meta name="theme-color" content="#FFFCF6">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="東京旅遊">
 <title>東京旅遊</title>
 <style>
 :root{--paper:#FFFCF6;--ink:#3E3A39;--coral:#F2A497;--sun:#F6D27A;--aqua:#A8D3E6;--leaf:#B9DAA5;color-scheme:light}
@@ -16,7 +19,7 @@ button{font:inherit;color:var(--ink);cursor:pointer}
 nav{position:fixed;top:0;left:0;right:0;z-index:9;display:flex;gap:8px;justify-content:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:var(--paper);border-bottom:3px solid var(--ink)}
 nav a{flex:1;max-width:110px;text-align:center;padding:5px 0;border:3px solid var(--ink);border-radius:999px;color:var(--ink);text-decoration:none;font-weight:800;background:var(--paper)}
 nav a.on{background:var(--c)}
-.ib{flex:none;width:44px;border:3px solid var(--ink);border-radius:999px;background:var(--paper);font-size:18px;line-height:1;padding:0}
+.ib{display:flex;align-items:center;justify-content:center;flex:none;width:44px;border:3px solid var(--ink);border-radius:999px;background:var(--paper);font-size:18px;line-height:1;padding:0}
 #up{font-weight:800;font-size:20px}
 body.edit #gear{background:var(--sun)}
 main{max-width:720px;margin:0 auto;padding:calc(76px + env(safe-area-inset-top,0px)) 14px 28px}
@@ -100,7 +103,7 @@ body.edit .tab.ed,body.edit .add.ed{display:block!important}
 .add{width:100%;margin-top:10px;border:3px dashed var(--ink);border-radius:18px;background:var(--paper);padding:6px;font-weight:800}
 .tab.add{width:auto;margin:0;flex:none}
 /* 對話框 */
-dialog{border:3px solid var(--ink);border-radius:26px;background:var(--paper);color:var(--ink);padding:16px;width:min(92vw,520px);max-height:88vh;overflow:auto;box-shadow:0 4px 0 var(--ink);margin:auto}
+dialog{border:3px solid var(--ink);border-radius:26px;background:var(--paper);color:var(--ink);padding:14px;box-sizing:border-box;width:calc(100vw - 24px);max-width:520px;max-height:calc(100dvh - 24px);overflow-x:hidden;overflow-y:auto;box-shadow:0 4px 0 var(--ink);margin:auto}
 dialog::backdrop{background:rgba(62,58,57,.45)}
 dialog label{display:block;font-weight:800;font-size:14px;margin-top:10px}
 dialog input:not([type=checkbox]),dialog textarea,dialog select{display:block;width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:3px solid var(--ink);border-radius:14px;padding:6px 10px;margin-top:4px}
@@ -152,7 +155,7 @@ dialog textarea{min-height:68px;resize:vertical}
 <a href="#days" style="--c:var(--coral)">行程</a>
 <a href="#prep" style="--c:var(--leaf)">準備</a>
 <a href="#exp" style="--c:var(--sun)">記帳</a>
-<button id="up" class="ib" type="button" aria-label="回到最上面">↑</button>
+<button id="up" class="ib" type="button" aria-label="回到最上面"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M16 5L26 16H20V27H12V16H6Z" fill="#F6D27A" stroke="#3E3A39" stroke-width="2.6" stroke-linejoin="round"/></svg></button>
 <button id="gear" class="ib" type="button" aria-label="設定">⚙️</button>
 </nav>
 <main>
@@ -405,6 +408,7 @@ function normBudget(r) {
   if (m[2]) note = `預算 NT$ ${m[1]} ~ ${m[2]}` + (note ? '，' + note : '');
   return { k: r.k || '', amt: parseInt(m[1].replace(/,/g, ''), 10) || 0, note };
 }
+const noParen = t => String(t || '').replace(/\s*[（(][^）)]*[）)]/g, '').trim();
 function normalize(d) {
   if (!Array.isArray(d.prep)) {
     d.prep = [];
@@ -566,6 +570,7 @@ function openForm(title, fields, vals, onSave, onDel) {
   $('#fno').onclick = () => dlg.close();
   if (onDel) $('#fdel').onclick = () => { if (confirm('確定要刪除嗎？')) { dlg.close(); onDel(); } };
   dlg.showModal();
+  dlg.setAttribute('tabindex','-1'); dlg.focus(); if (document.activeElement && document.activeElement !== dlg) document.activeElement.blur();
 }
 const ymd = (mo, d) => `${data.year || 2027}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 const fromYmd = s => { const [y, m, d] = s.split('-').map(Number); return { mo: m, d, w: WD[new Date(y, m - 1, d).getDay()] }; };
@@ -635,18 +640,16 @@ const act = {
     openForm(i < 0 ? '新增行程' : '編輯行程', [
       { k: 'a', label: '開始時間（留空 = 全天）', t: 'time' }, { k: 'b', label: '結束時間（選填）', t: 'time' },
       { k: 'title', label: '標題' }, { k: 'tags', label: '交通方式', t: 'tags' },
-      { k: 'route', label: '路線說明（每行一則）', t: 'area' },
-      { k: 'notes', label: '備註（每行一則）', t: 'area' },
-      { k: 'places', label: '📍 地點（附近有很多店家的話，可以一直新增）', t: 'places' },
-      { k: 'links', label: '連結（每行一個網址）', t: 'area' }
+      { k: 'notes', label: '說明（每行一則）', t: 'area' },
+      { k: 'places', label: '📍 地點（附近有很多店家的話，可以一直新增）', t: 'places' }
     ], {
       a: it.a == '全天' ? '' : it.a, b: it.b, title: it.title, tags: it.tags || [],
-      route: (it.route || []).join('\n'), notes: (it.notes || []).join('\n'), links: (it.links || []).join('\n'),
-      places: (it.places || []).map(p => { const auto = p.u ? '' : mapUrl(p.q || p.l); return { l: p.l, q: p.q, link: p.u || auto, auto }; })
+      notes: [...(it.route || []), ...(it.notes || [])].join('\n'),
+      places: (it.places || []).map(p => { const auto = p.u ? '' : mapUrl(p.q || p.l); return { l: noParen(p.l), q: p.q, link: p.u || auto, auto }; })
     }, v => {
       Object.assign(it, {
-        a: v.a || '全天', b: v.b, title: v.title, tags: v.tags, route: lines(v.route), notes: lines(v.notes), links: lines(v.links),
-        places: v.places.map(toPlace)
+        a: v.a || '全天', b: v.b, title: v.title, tags: v.tags, route: [], notes: lines(v.notes),
+        places: v.places.map(toPlace).map(p => ({ ...p, l: noParen(p.l) }))
       });
       if (i < 0) day.items.push(it); commit(day);
     }, i < 0 ? null : () => { day.items.splice(i, 1); commit(day); });
