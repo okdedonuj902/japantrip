@@ -680,6 +680,9 @@ ${cloud ? '' : '<p class="note">尚未設定雲端同步，目前可直接編輯
   if (!dlg.open) dlg.showModal();
 }
 $('#gear').onclick = openSettings;
+try { history.scrollRestoration = 'manual'; if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+window.scrollTo(0, 0);
+addEventListener('load', () => setTimeout(() => window.scrollTo(0, 0), 0));
 $('#up').onclick = () => window.scrollTo({ top: 0, behavior: RM.matches ? 'auto' : 'smooth' });
 $('#dlg').addEventListener('change', e => {
   if (e.target.id == 'edsw') { edit = e.target.checked; try { localStorage.setItem('trip-edit', edit ? '1' : '0'); } catch (x) {} applyEdit(); }
@@ -751,7 +754,6 @@ document.querySelector('nav a[href="#exp"]').addEventListener('click', e => {
   e.preventDefault();
   const root = document.documentElement, prev = root.style.scrollBehavior;
   root.style.scrollBehavior = 'auto'; X('exp').scrollIntoView(); root.style.scrollBehavior = prev;
-  try { history.replaceState(null, '', '#exp'); } catch (x) {}
 });
 X('xcan').onclick = () => { xReset(); xmsg(''); };
 X('xf').addEventListener('submit', e => {
