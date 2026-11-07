@@ -77,6 +77,37 @@ h3{font-size:17px;margin-bottom:6px}
 .total b.sm{font-size:22px}
 .total .mut{color:var(--ink);font-weight:400}
 [hidden]{display:none!important}
+/* 迪士尼挑選清單（顯示在迪士尼那兩天的行程下面） */
+.dz{margin-top:6px}
+.dz h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dzn{background:#FFF4D6;font-size:14px;line-height:1.6}
+.dzn ul{margin:6px 0 0;padding-left:1.2em}
+.dzbar{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.dzc{border:2px solid var(--ink);border-radius:999px;background:var(--paper);padding:1px 11px;font-size:13px;font-weight:700}
+.dzc.on{background:var(--c,var(--sun))}
+.dzcount{font-size:14px;font-weight:800;margin:4px 4px 0}
+.dzh{font-size:17px;margin:20px 4px 0;display:flex;align-items:baseline;gap:8px}
+.dzh small{font-weight:400;font-size:13px;color:#6b6462}
+.dzi{background:var(--paper);border:3px solid var(--ink);border-radius:20px;padding:10px 12px;margin-top:10px;overflow-wrap:anywhere}
+.dzi.want{background:#FDE7E2}
+.dzi.maybe{background:#FFF4D6}
+.dzi.no .dzt,.dzi.no .dzd,.dzi.no .dzm{opacity:.45}
+.dzi.off{border-style:dashed;border-color:#B8B0A8}
+.dzi.off .dzt{text-decoration:line-through;opacity:.6}
+.dzi.off .dzd{opacity:.6}
+.dzt{font-weight:800}
+.dzd{font-size:14px;color:#6b6462;margin-top:2px}
+.dzo{font-size:13px;color:#9a5a3a;margin-top:3px}
+.dzm .tag{background:var(--c,var(--paper))}
+.dzm .tag.x{background:#D9D2CA}
+.dzm .pl{margin:6px 6px 0 0}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:3px solid var(--ink);border-radius:14px;overflow:hidden;max-width:300px;margin-top:10px}
+.seg button{border:0;border-left:3px solid var(--ink);background:var(--paper);font-weight:800;padding:6px 2px;min-height:40px}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"][data-v="want"]{background:var(--coral)}
+.seg button[aria-pressed="true"][data-v="maybe"]{background:var(--sun)}
+.seg button[aria-pressed="true"][data-v="no"]{background:#D9D2CA}
+.seg button[aria-pressed="true"]{animation:pop .4s cubic-bezier(.3,1.7,.5,1)}
 /* 記帳 */
 .xf>label,.xl{display:block;font-weight:800;font-size:14px;margin-top:12px}
 .xf>label:first-child{margin-top:0}
@@ -478,6 +509,17 @@ async function initCloud() {
       }
       exp = cloud; saveExp(); renderExp();
     }, e => xmsg(e && e.code == 'permission-denied' ? '雲端不允許存取記帳：請到 Firebase 更新 Firestore 規則，目前先用這支手機上的紀錄' : '記帳目前離線，顯示這支手機上的紀錄'));
+    // 迪士尼挑選清單：每個項目一份文件，第一次連線時把只存在這支手機的選擇補上去
+    let dzFirst = true;
+    onSnapshot(collection(db, 'disney'), snap => {
+      const cloud = {};
+      snap.docs.forEach(x => { const r = x.data(); if (r && r.key && r.v) cloud[r.key] = r.v; });
+      if (dzFirst) {
+        dzFirst = false;
+        Object.keys(dzPick).filter(k => !cloud[k]).forEach(k => { cloud[k] = dzPick[k]; fb.setDoc(fb.doc(db, 'disney', dzDoc(k)), { key: k, v: dzPick[k], ts: Date.now() }).catch(() => {}); });
+      }
+      dzPick = cloud; saveDz(); renderDz();
+    }, e => dzSay(e && e.code == 'permission-denied' ? '雲端不允許讀取迪士尼清單：請到 Firebase 更新 Firestore 規則，目前先用這支手機上的選擇' : '迪士尼清單目前離線，顯示這支手機上的選擇'));
   } catch (e) { setStatus('雲端載入失敗，顯示這支手機上的資料'); }
 }
 
@@ -519,7 +561,7 @@ function showDay(i, scroll) {
   if (!d) { box.innerHTML = '<div class="card">還沒有行程。開啟編輯模式後，按「＋ 一天」新增。</div>'; return; }
   dayIdx = i;
   document.querySelectorAll('.tab[data-i]').forEach((t, j) => { t.classList.toggle('on', j == i); t.setAttribute('aria-selected', j == i); });
-  box.innerHTML = `<div class="card dh">Day ${d.n}　${esc(d.title)}${eb('day,' + i)}</div><ul class="tl">${d.items.map((it, j) => itemHTML(it, j, i)).join('')}</ul>${addBtn(`item,${i},-1`, '新增行程')}`;
+  box.innerHTML = `<div class="card dh">Day ${d.n}　${esc(d.title)}${eb('day,' + i)}</div><ul class="tl">${d.items.map((it, j) => itemHTML(it, j, i)).join('')}</ul>${addBtn(`item,${i},-1`, '新增行程')}${dzPark(d) ? `<div class="dz" id="dz" data-park="${dzPark(d)}">${dzHTML(dzPark(d))}</div>` : ''}`;
   const on = document.querySelector('.tab.on');
   if (scroll && on) on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: RM.matches ? 'auto' : 'smooth' });
 }
@@ -791,6 +833,209 @@ function renderExp() {
     }).join('');
 }
 renderExp();
+
+// ================= 迪士尼挑選清單 =================
+// 行程裡標題有「迪士尼海洋」或「迪士尼樂園」的那一天，會在時間軸下面出現清單。
+// 每個項目的選擇是 Firestore「disney」集合裡的一份文件。
+const DZ = {
+land:{
+ notice:`<strong>1/22（五）樂園重點</strong><ul>
+ <li>當天官方已排整修：<b>飛濺山、幽靈公館、小飛俠天空之旅、叢林巡航</b>都不開，清單裡已劃掉。</li>
+ <li>晚上的電子大遊行和煙火 1/22 都有演。</li>
+ <li>新太空山和無敵破壞王「甜蜜衝刺」（2027/4/15 開幕）都還沒開，這次玩不到。</li>
+ <li>1/13 起有米妮主題活動「Disney Pal-Palooza：米妮的 Funderland」。</li>
+ <li>營業時間預計 9:00–21:00。門票在 <b>2026/11/22 下午 2 點</b>開賣（兩個月前同一天）。</li></ul>`,
+ areas:[
+ ["世界市集","入口大街",[
+  ["雙層巴士","ride","繞園區中央圓環的復古雙層巴士",{}],
+  ["便士拱廊","ride","懷舊投幣遊戲機",{}],
+ ]],
+ ["探險樂園","",[
+  ["加勒比海盜","ride","搭小船進入海盜世界，傑克船長會登場",{}],
+  ["叢林巡航：勇闖野生世界","ride","船長帶隊的叢林探險",{off:1,note:"整修 2027/1/6–3/31"}],
+  ["西部沿河鐵路","ride","蒸汽火車繞美國河一圈",{}],
+  ["魯賓遜家族大樹屋","ride","爬上大樹屋參觀",{off:1,note:"2022 年起暫停，重開日未定"}],
+  ["提基神殿：史迪奇「Aloha E Komo Mai!」","ride","室內鳥兒歌舞秀，史迪奇來搗蛋",{}],
+  ["米奇樂跳跳！同歡共舞！","show","給小朋友的 15 分鐘互動舞蹈表演",{entry:1}],
+  ["米奇七彩晚宴","show","波里尼西亞草壇餐廳的晚餐秀（約 70 分）",{note:"需事先預約餐廳"}],
+ ]],
+ ["西部樂園","",[
+  ["巨雷山","ride","礦車雲霄飛車，荒野中急轉俯衝",{dpa:1,thrill:1,h:102}],
+  ["西部樂園射擊館","ride","付費射擊遊戲",{note:"另外收費"}],
+  ["鄉村頑熊劇場","ride","熊熊們的鄉村音樂會",{note:"聖誕版到 1/16 結束，1/22 是一般版"}],
+  ["豪華馬克吐溫號","ride","三層蒸汽船遊美國河",{}],
+  ["頑童湯姆之島巨木筏","ride","搭木筏到島上探險步道",{note:"只開到下午，冬天收比較早"}],
+  ["鑽石綜藝總匯","show","鑽石馬蹄餐廳的晚餐秀",{note:"需事先預約餐廳"}],
+ ]],
+ ["動物天地","",[
+  ["飛濺山","ride","圓木舟從高處衝下水",{off:1,dpa:1,thrill:1,h:90,note:"整修 2027/1/7–2/4"}],
+  ["海狸兄弟獨木舟歷險","ride","自己划獨木舟",{note:"只開到下午 4 點左右"}],
+ ]],
+ ["夢幻樂園","",[
+  ["美女與野獸「城堡奇緣」","ride","魔法茶杯隨音樂旋轉跳舞，東京獨有",{dpa:1}],
+  ["小熊維尼獵蜜記","ride","蜂蜜罐無軌道亂跑，東京獨有",{dpa:1}],
+  ["幽靈公館","ride","999 隻幽靈的大宅",{off:1,dpa:1,note:"整修 2027/1/8–2/4"}],
+  ["小小世界","ride","各國娃娃的經典小船之旅",{}],
+  ["小飛俠天空之旅","ride","海盜船飛越倫敦夜空",{off:1,note:"整修 2027/1/6–2/2"}],
+  ["白雪公主冒險旅程","ride","採礦車穿過森林，巫婆會出現",{}],
+  ["小木偶奇遇記","ride","小車穿梭木偶冒險故事",{}],
+  ["小飛象","ride","坐小飛象繞圈飛",{}],
+  ["城堡旋轉木馬","ride","白馬旋轉木馬",{}],
+  ["愛麗絲的午茶派對","ride","旋轉茶杯",{}],
+  ["米奇魔法交響樂","ride","3D 電影，唐老鴨亂入米奇的演奏會",{note:"3/4 才開始整修，1/22 有開"}],
+  ["仙履奇緣童話大廳","ride","城堡內的灰姑娘展廳",{off:1,note:"2026/10 起暫停，重開日未定"}],
+  ["米奇魔法音樂世界","show","室內大型歌舞秀，約 25 分",{dpa:1,entry:1}],
+ ]],
+ ["卡通城","",[
+  ["兔子羅傑卡通轉轉車","ride","會亂轉的計程車",{note:"2/8 才開始整修，1/22 有開"}],
+  ["艾芝迷你雲霄飛車","ride","短短的兒童雲霄飛車",{h:90}],
+  ["米妮公館","ride","參觀米妮的家，可拍照",{}],
+  ["奇奇帝帝橡樹屋","ride","爬上奇奇帝帝的樹屋",{}],
+  ["唐老鴨汽船","ride","小朋友的遊戲船",{}],
+  ["高飛遊漆屋","ride","互動噴漆遊戲屋",{}],
+  ["卡通公園","ride","兒童遊戲區",{}],
+ ]],
+ ["明日樂園","",[
+  ["杯麵歡樂之旅","ride","大英雄天團機器人拉著車亂甩，有點暈",{dpa:1,h:81}],
+  ["怪獸電力公司「迷藏巡遊車」","ride","拿手電筒照怪獸",{dpa:1}],
+  ["星際旅行：冒險續航","ride","星際大戰 3D 模擬飛行，劇情隨機",{thrill:1,h:102,note:"2/5 才開始整修，1/22 有開"}],
+  ["幸會史迪奇","ride","和史迪奇即時對話的小劇場",{}],
+  ["The D-Groovationz4 Live","show","歌舞天團現場演唱秀，約 25 分",{dpa:1,entry:1}],
+ ]],
+ ["遊行・夜間・煙火","全園區",[
+  ["迪士尼眾彩交融","show","白天大遊行，約 45 分",{dpa:1,note:"沿路可坐地等，DPA 可買觀賞區座位"}],
+  ["電子大遊行～夢之光","show","夜間燈光遊行，約 45 分，必看",{dpa:1,note:"1 月只有 1/28 停演，1/22 有演"}],
+  ["眾彩滿夜空","show","煙火，約 5 分，約 20:30",{note:"強風會取消"}],
+  ["米妮的 Funderland","show","Disney Pal-Palooza 米妮主題活動",{ltd:1,note:"2027/1/13–3/31"}],
+  ["米奇等角色迎賓","show","米奇公館、卡通城等地和角色拍照",{note:"部分要排隊或在 App 報名"}],
+ ]],
+ ]
+},
+sea:{
+ notice:`<strong>1/21（四）海洋重點</strong><ul>
+ <li>當天官方已排：<b>地心探險之旅整修</b>（1/8–3/8）、<b>電氣化鐵路整修</b>（1/8–2/10）、<b>夜間秀「堅信！」停演</b>（1/6–2/4），清單裡已劃掉。</li>
+ <li>晚上還有<b>煙火「眾彩滿夜空」</b>和<b>25 週年投影秀「閃耀歡騰之夜」</b>可看（只有 1/22 停演，你這天有）。</li>
+ <li>還在 25 週年「閃耀歡騰」期間（到 3/31），有週年港灣表演；1/13 起驚魂古塔換成限定版「Level 13」。</li>
+ <li>夢幻泉鄉 3 個設施一入園就在 App 搶 DPA 或預約等候卡。門票在 <b>2026/11/21 下午 2 點</b>開賣。</li></ul>`,
+ areas:[
+ ["地中海港灣","入口",[
+  ["翱翔：夢幻奇航","ride","飛越世界名勝的大銀幕飛行",{dpa:1,h:102}],
+  ["威尼斯貢多拉遊船","ride","船夫划船遊運河，會唱歌",{}],
+  ["迪士尼海洋渡輪航線","ride","蒸汽船遊港灣，也可當交通",{}],
+  ["要塞探險","ride","爬要塞、帆船，可自由探索",{}],
+  ["要塞探險「挑戰李奧納多」","ride","拿地圖解謎任務",{note:"約 12:00–18:00"}],
+  ["閃耀歡騰慶典","show","25 週年港灣表演，米奇等坐船登場，約 15 分",{ltd:1,note:"到 2027/3/31，平日約 10:30、14:00 兩場"}],
+  ["堅信！～夢想之海～","show","港灣夜間水上秀，約 30 分",{off:1,dpa:1,note:"停演 2027/1/6–2/4"}],
+  ["【情境營造】閃耀歡騰之夜","show","25 週年投影在觀海景飯店外牆，約 5 分",{ltd:1,note:"晚上演 2–3 場，時刻 12/8 左右公布；1/21 有演（1/22 停演）"}],
+ ]],
+ ["美國海濱","",[
+  ["驚魂古塔：Level 13","ride","自由落體電梯，期間限定版本",{dpa:1,thrill:1,h:102,ltd:1,note:"限定版 2027/1/13–3/31"}],
+  ["玩具總動員瘋狂遊戲屋","ride","4D 射擊遊戲，很熱門",{dpa:1}],
+  ["龜龜漫談","ride","和海龜爺爺即時對話",{}],
+  ["迪士尼海洋電氣化鐵路","ride","高架電車往發現港",{off:1,note:"整修 2027/1/8–2/10"}],
+  ["大都會交通工具","ride","復古老爺車",{note:"只在部分日子 11:00–17:00 營運"}],
+  ["舞動全球！","show","世界各地舞蹈的戶外舞台秀，約 25 分",{dpa:1,entry:1}],
+  ["達菲與好友的非凡友誼","show","鱈魚岬錦標美食的用餐秀",{note:"需事先預約"}],
+ ]],
+ ["發現港","",[
+  ["海底巡遊艇：尼莫＆好友的海洋世界","ride","坐潛水艇看海底電影，會晃",{h:90}],
+  ["驚奇水世界","ride","無軌道小船在水上亂轉",{h:90,note:"本次官方清單未列出，可能暫停中，出發前確認"}],
+ ]],
+ ["失落河三角洲","",[
+  ["印第安納瓊斯冒險旅程：水晶骷髏頭魔宮","ride","吉普車穿越陷阱神殿",{dpa:1,thrill:1,h:117,note:"2026/11/30 整修完重開；可走單人騎士"}],
+  ["忿怒雙神","ride","360 度翻轉雲霄飛車",{dpa:1,thrill:1,h:117,note:"3/17 才開始整修，1/21 有開；可走單人騎士"}],
+  ["夢想起飛","show","米奇在飛機工廠的歌舞秀，約 25 分",{dpa:1,entry:1}],
+ ]],
+ ["夢幻泉鄉","最新區域",[
+  ["安娜與艾莎的冰雪之旅","ride","搭船走進冰雪奇緣，唱著名曲",{dpa:1}],
+  ["小飛俠夢幻島歷險記","ride","飛越夢幻島的大型 3D 飛行",{dpa:1,h:102,note:"3/9 才開始整修，1/21 有開"}],
+  ["樂佩公主天燈盛會","ride","小船看天燈，很浪漫",{dpa:1}],
+  ["奇妙仙子妙妙小車","ride","小朋友也可以的小車",{}],
+ ]],
+ ["阿拉伯海岸","",[
+  ["辛巴達傳奇之旅","ride","小船音樂劇，主題曲很洗腦",{note:"3/17 才開始整修，1/21 有開"}],
+  ["茉莉公主的飛天魔毯","ride","飛天魔毯繞圈飛",{}],
+  ["沙漠商隊旋轉木馬","ride","雙層旋轉木馬",{}],
+  ["神燈劇場","ride","神燈精靈 3D 魔術秀",{}],
+ ]],
+ ["美人魚礁湖","室內居多，冷天好去",[
+  ["美人魚礁湖劇場「川頓王的音樂會」","ride","艾莉兒的室內音樂劇",{note:"官方目前沒列營運時間，出發前確認"}],
+  ["小胖的飛魚雲霄飛車","ride","短短的兒童雲霄飛車",{h:90}],
+  ["史卡托的寄居蟹","ride","寄居蟹繞圈",{}],
+  ["河豚氣球競賽","ride","兒童轉轉車",{}],
+  ["跳躍水母","ride","水母上下彈跳",{}],
+  ["旋轉海藻杯","ride","旋轉杯",{}],
+  ["艾莉兒遊樂場","ride","室內探索遊戲區",{}],
+ ]],
+ ["神祕島","",[
+  ["地心探險之旅","ride","火山內地底車衝出火山口",{off:1,dpa:1,thrill:1,h:117,note:"整修 2027/1/8–3/8"}],
+  ["海底兩萬哩","ride","小潛艇探索海底",{}],
+ ]],
+ ["夜間・煙火","全園區",[
+  ["眾彩滿夜空","show","煙火，約 5 分，約 20:30",{note:"強風會取消；1/21 有演（1/22 才停演）"}],
+  ["角色迎賓","show","達菲、米奇等角色拍照點",{note:"部分要排隊或在 App 報名"}],
+ ]],
+ ]
+}};
+
+const DZOFF={"sea": {"威尼斯貢多拉遊船": "attraction/230", "翱翔：夢幻奇航": "attraction/219", "迪士尼海洋渡輪航線": "attraction/227", "要塞探險": "attraction/244", "要塞探險「挑戰李奧納多」": "attraction/245", "龜龜漫談": "attraction/246", "驚魂古塔：Level 13": "attraction/243", "迪士尼海洋電氣化鐵路": "attraction/232", "玩具總動員瘋狂遊戲屋": "attraction/218", "大都會交通工具": "attraction/233", "海底巡遊艇：尼莫＆好友的海洋世界": "attraction/247", "印第安納瓊斯冒險旅程：水晶骷髏頭魔宮": "attraction/222", "忿怒雙神": "attraction/242", "安娜與艾莎的冰雪之旅": "attraction/255", "小飛俠夢幻島歷險記": "attraction/257", "奇妙仙子妙妙小車": "attraction/258", "樂佩公主天燈盛會": "attraction/256", "沙漠商隊旋轉木馬": "attraction/236", "茉莉公主的飛天魔毯": "attraction/220", "辛巴達傳奇之旅": "attraction/235", "神燈劇場": "attraction/226", "艾莉兒遊樂場": "attraction/202", "跳躍水母": "attraction/239", "史卡托的寄居蟹": "attraction/238", "小胖的飛魚雲霄飛車": "attraction/237", "河豚氣球競賽": "attraction/240", "美人魚礁湖劇場「川頓王的音樂會」": "attraction/221", "旋轉海藻杯": "attraction/241", "海底兩萬哩": "attraction/224", "地心探險之旅": "attraction/223", "眾彩滿夜空": "show/7801", "閃耀歡騰慶典": "show/7404", "【情境營造】閃耀歡騰之夜": "show/7405", "堅信！～夢想之海～": "show/967", "達菲與好友的非凡友誼": "show/7601", "舞動全球！": "show/7604", "夢想起飛": "show/7602"}, "land": {"迪士尼眾彩交融": "show/7000", "電子大遊行～夢之光": "show/913", "眾彩滿夜空": "show/7800", "米奇樂跳跳！同歡共舞！": "show/985", "米奇七彩晚宴": "show/970", "鑽石綜藝總匯": "show/7200", "米奇魔法音樂世界": "show/895", "The D-Groovationz4 Live": "show/7204"}};
+const dzPhoto=(park,n)=>{const p=DZOFF[park][n];if(p){const [k,id]=p.split("/");return `https://www.tokyodisneyresort.jp/tc/${park==="land"?"tdl":"tds"}/${k}/detail/${id}/`}return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent((park==="land"?"東京迪士尼樂園 ":"東京迪士尼海洋 ")+n)};
+
+const dzPark = d => /迪士尼海洋|DisneySea/i.test(d.title) ? 'sea' : /迪士尼樂園|Disneyland/i.test(d.title) ? 'land' : '';
+const dzHash = str => { let h = 5381; for (const c of str) h = ((h << 5) + h + c.codePointAt(0)) >>> 0; return h.toString(36); };
+const dzDoc = id => (id.startsWith('sea|') ? 'sea-' : 'land-') + dzHash(id);
+let dzPick = {}, dzF = 'all', dzMsg = '';
+try { dzPick = JSON.parse(localStorage.getItem('trip-disney') || '{}') || {}; } catch (e) {}
+const saveDz = () => { try { localStorage.setItem('trip-disney', JSON.stringify(dzPick)); } catch (e) {} };
+const DZF = [['all','全部'],['open','當天有開'],['ride','遊樂設施'],['show','表演・遊行'],['thrill','刺激類'],['want','想要','coral'],['maybe','考慮','sun'],['undecided','還沒決定','aqua']];
+function dzHTML(park) {
+  const P = DZ[park]; let nW = 0, nM = 0, nL = 0, rows = '';
+  P.areas.forEach(([area, sub, items]) => {
+    let r = '';
+    items.forEach(([n, type, desc, o]) => {
+      const id = park + '|' + n, v = o.off ? '' : (dzPick[id] || '');
+      if (v == 'want') nW++; else if (v == 'maybe') nM++; else if (!v && !o.off) nL++;
+      if ((dzF == 'open' && o.off) || (dzF == 'ride' && type != 'ride') || (dzF == 'show' && type != 'show') || (dzF == 'thrill' && !o.thrill)
+        || (dzF == 'want' && v != 'want') || (dzF == 'maybe' && v != 'maybe') || (dzF == 'undecided' && (v || o.off))) return;
+      const t = [];
+      if (o.off) t.push('<span class="tag x">當天休止</span>');
+      if (o.ltd) t.push('<span class="tag" style="--c:var(--leaf)">期間限定</span>');
+      if (o.thrill) t.push('<span class="tag" style="--c:var(--coral)">刺激</span>');
+      if (o.dpa) t.push('<span class="tag" style="--c:var(--sun)">DPA</span>');
+      if (o.h) t.push(`<span class="tag">身高 ${o.h}cm+</span>`);
+      if (o.entry) t.push('<span class="tag">App 抽選</span>');
+      t.push(`<span class="tag">${type == 'ride' ? '設施' : '表演'}</span>`);
+      const seg = o.off ? '' : `<div class="seg" role="group" aria-label="${esc(n)}">${[['want','想要'],['maybe','考慮'],['no','不要']].map(([k, l]) => `<button type="button" data-dz="${esc(id)}" data-v="${k}" aria-pressed="${v == k}">${l}</button>`).join('')}</div>`;
+      r += `<div class="dzi${v ? ' ' + v : ''}${o.off ? ' off' : ''}"><div class="dzt">${esc(n)}</div><div class="dzd">${esc(desc)}</div>${o.note ? `<div class="dzo">※ ${esc(o.note)}</div>` : ''}<div class="dzm">${t.join('')}<br><a class="pl" href="${dzPhoto(park, n)}" target="_blank" rel="noopener">📷 看照片</a></div>${seg}</div>`;
+    });
+    if (r) rows += `<div class="dzh">${esc(area)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>${r}`;
+  });
+  return `<h2>${park == 'sea' ? '🌋 迪士尼海洋' : '🏰 迪士尼樂園'} 挑選清單</h2>
+<div class="card dzn">${P.notice}</div>
+<div class="dzbar">${DZF.map(([k, l, c]) => `<button type="button" class="dzc${dzF == k ? ' on' : ''}" data-dzf="${k}"${c ? ` style="--c:var(--${c})"` : ''}>${l}</button>`).join('')}</div>
+<p class="dzcount">想要 ${nW}・考慮 ${nM}・還沒決定 ${nL}</p><p class="mut" id="dzmsg">${esc(dzMsg)}</p>
+${rows || '<div class="card ctr mut">這一類沒有項目</div>'}
+<p class="mut" style="margin-top:14px">依官網 2026/11/7 公布的設施、表演與休止日程整理；1 月表演時刻約 12/8 公布，出發前一週再確認官方「休止情報」。</p>`;
+}
+function renderDz() {
+  const box = X('dz'); if (!box) return;
+  box.innerHTML = dzHTML(box.dataset.park);
+}
+const dzSay = t => { dzMsg = t; const m = X('dzmsg'); if (m) m.textContent = t; };
+document.addEventListener('click', async e => {
+  const f = e.target.closest('[data-dzf]');
+  if (f) { dzF = f.dataset.dzf; renderDz(); return; }
+  const b = e.target.closest('[data-dz]'); if (!b) return;
+  const id = b.dataset.dz, v = b.dataset.v, clear = dzPick[id] == v;
+  if (clear) delete dzPick[id]; else dzPick[id] = v;
+  saveDz(); renderDz();
+  if (!fb) return dzSay('已記在這支手機（尚未設定雲端同步）');
+  try {
+    const ref = fb.doc(fb.db, 'disney', dzDoc(id));
+    if (clear) await fb.deleteDoc(ref); else await fb.setDoc(ref, { key: id, v, ts: Date.now() });
+    dzSay('已儲存並同步 ✓');
+  } catch (err) { dzSay(err.code == 'permission-denied' ? '雲端不允許寫入迪士尼清單：請到 Firebase 更新 Firestore 規則，目前先存在這支手機' : '同步失敗，已先存在這支手機'); }
+});
 
 render();
 initCloud();
