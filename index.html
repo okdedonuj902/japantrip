@@ -274,12 +274,12 @@ const EMBED = `【✈️航班與機票資訊】
 11:45 - 13:15　搭乘京成 Skyliner（至日暮里轉乘 JR）前往八丁堀飯店辦理 Check-in 及寄放行李
 14:00 - 18:00　銀座自由逛街與購物（OK 超市、Uniqlo 旗艦店、GU、塩麵包屋 pain･maison 銀座店）
 18:30 - 20:00　晚餐：日本橋炸豬排 HAJIME (日本橋 とんかつ ハジメ)
-■ 01月21日 (四) Day 2：東京迪士尼樂園 (Tokyo Disneyland)
-全天：東京迪士尼樂園
-交通方式：從飯店步行至八丁堀站，搭乘 JR 京葉線直達舞濱站（車程約 12 分鐘）
-■ 01月22日 (五) Day 3：東京迪士尼海洋 (Tokyo DisneySea)
+■ 01月21日 (四) Day 2：東京迪士尼海洋 (Tokyo DisneySea)
 全天：東京迪士尼海洋
 交通方式：八丁堀站搭乘 JR 京葉線至舞濱站，轉乘迪士尼單軌電車前往迪士尼海洋
+■ 01月22日 (五) Day 3：東京迪士尼樂園 (Tokyo Disneyland)
+全天：東京迪士尼樂園
+交通方式：從飯店步行至八丁堀站，搭乘 JR 京葉線直達舞濱站（車程約 12 分鐘）
 ■ 01月23日 (六) Day 4：富士山·箱根一日遊
 07:30 - 07:50　從八丁堀搭乘 JR 京葉線至東京站（約 2 分鐘）或搭乘計程車前往集合點
 08:00 集合發車　集合地點：JR 東京站前 新丸之內大樓 BEAMS 標牌下
@@ -440,6 +440,19 @@ function normBudget(r) {
   return { k: r.k || '', amt: parseInt(m[1].replace(/,/g, ''), 10) || 0, note };
 }
 const noParen = t => String(t || '').replace(/\s*[（(][^）)]*[）)]/g, '').trim();
+// 迪士尼兩天對調：1/21 改去海洋、1/22 改去樂園。
+// 如果資料還是舊的順序（1/21 樂園、1/22 海洋），就把兩天的主題和行程整組互換；已經換好就不會再動。
+const RE_LAND = /迪士尼(樂園|陸地|乐园)|Disney\s*land|ディズニーランド/i, RE_SEA = /迪士尼海洋|Disney\s*Sea|ディズニーシー/i;
+// 用這一天的主題＋行程標題來判斷是哪一座樂園（主題有寫最準，沒寫就看行程）
+const dayText = x => [x.title, ...(x.items || []).map(i => i.title)].join(' ');
+const parkOf = x => RE_SEA.test(x.title) ? 'sea' : RE_LAND.test(x.title) ? 'land' : RE_SEA.test(dayText(x)) ? 'sea' : RE_LAND.test(dayText(x)) ? 'land' : '';
+const dayAt = (d, mo, dd) => (d.days || []).find(x => +x.mo == mo && +x.d == dd);
+function swapDays(a, b) { [a.title, b.title] = [b.title, a.title]; [a.items, b.items] = [b.items, a.items]; }
+function fixDisney(d) {
+  const a = dayAt(d, 1, 21), b = dayAt(d, 1, 22);
+  if (!a || !b || parkOf(a) != 'land' || parkOf(b) != 'sea') return false;
+  swapDays(a, b); return true;
+}
 function normalize(d) {
   if (!Array.isArray(d.prep)) {
     d.prep = [];
@@ -456,6 +469,7 @@ function normalize(d) {
 let data = null, dayIdx = 0, edit = false, fb = null, pending = null, statusMsg = '';
 try { data = JSON.parse(localStorage.getItem('trip-data') || 'null'); edit = localStorage.getItem('trip-edit') == '1'; } catch (e) {}
 data = (data && Array.isArray(data.days)) ? normalize(data) : seed();
+let swapLocal = fixDisney(data);
 
 const saveLocal = () => { try { localStorage.setItem('trip-data', JSON.stringify(data)); } catch (e) {} };
 const setStatus = t => { statusMsg = t; $('#st').textContent = t; const s = $('#sst'); if (s) s.textContent = t; };
@@ -474,7 +488,9 @@ async function push() {
 function applyRemote(d) {
   const dlg = $('#dlg');
   if (dlg.open && dlg.dataset.k == 'form') { pending = d; return; }
+  const swapped = fixDisney(d);
   data = normalize(d); saveLocal(); render();
+  if (swapped) push(); // 把對調後的行程存回雲端，另一支手機也會跟著更新
 }
 $('#dlg').addEventListener('close', () => { if (pending) { const d = pending; pending = null; applyRemote(d); } });
 async function commit(focus) {
@@ -496,6 +512,7 @@ async function initCloud() {
     onSnapshot(fb.ref, snap => {
       if (snap.metadata.hasPendingWrites) return;
       if (!snap.exists()) { setStatus('雲端還沒有資料，正在上傳目前的行程…'); return push(); }
+      swapLocal = false;
       try { const d = JSON.parse(snap.data().json); if (d && Array.isArray(d.days)) applyRemote(d); } catch (e) {}
       setStatus('已與雲端同步 · ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }));
     }, e => setStatus(e && e.code == 'permission-denied' ? '雲端不允許讀取：請檢查 Firestore 的「規則」' : '目前離線，顯示上次的內容'));
@@ -716,6 +733,8 @@ function openSettings() {
 ${cloud ? '' : '<p class="note">尚未設定雲端同步，目前可直接編輯，但修改只存在這支手機。</p>'}
 <label class="sw"><input type="checkbox" id="edsw"${edit ? ' checked' : ''}>編輯模式</label>
 <p class="note">開啟後，行程各處會出現「✎」和「＋」按鈕。</p>
+<div class="bar"><button class="no" type="button" data-s="swapdz">🔁 1/21 和 1/22 行程對調</button></div>
+<p class="note">迪士尼那兩天如果順序不對，按一下就會整天（主題和所有行程）互換，並同步到雲端。</p>
 <div class="bar"><button class="no" type="button" data-s="export">匯出備份</button><button class="no" type="button" data-s="import">匯入備份</button></div>
 <div class="bar"><button class="del" type="button" data-s="reset">重設為初始行程</button><button type="button" data-s="close">關閉</button></div>
 <input type="file" id="imp" accept="application/json,.json" hidden>`;
@@ -741,6 +760,11 @@ $('#dlg').addEventListener('click', async e => {
     a.download = 'tokyo-trip-backup.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
   if (s == 'import') $('#imp').click();
+  if (s == 'swapdz') {
+    const a = dayAt(data, 1, 21), b = dayAt(data, 1, 22);
+    if (!a || !b) return setStatus('找不到 1/21 或 1/22 這兩天');
+    swapDays(a, b); dayIdx = data.days.indexOf(a); await commit(a); $('#dlg').close();
+  }
   if (s == 'reset' && confirm('確定要把所有內容換回初始行程嗎？目前的修改會被覆蓋。')) { data = seed(); dayIdx = 0; commit(); $('#dlg').close(); }
 });
 
@@ -981,7 +1005,7 @@ sea:{
 const DZOFF={"sea": {"威尼斯貢多拉遊船": "attraction/230", "翱翔：夢幻奇航": "attraction/219", "迪士尼海洋渡輪航線": "attraction/227", "要塞探險": "attraction/244", "要塞探險「挑戰李奧納多」": "attraction/245", "龜龜漫談": "attraction/246", "驚魂古塔：Level 13": "attraction/243", "迪士尼海洋電氣化鐵路": "attraction/232", "玩具總動員瘋狂遊戲屋": "attraction/218", "大都會交通工具": "attraction/233", "海底巡遊艇：尼莫＆好友的海洋世界": "attraction/247", "印第安納瓊斯冒險旅程：水晶骷髏頭魔宮": "attraction/222", "忿怒雙神": "attraction/242", "安娜與艾莎的冰雪之旅": "attraction/255", "小飛俠夢幻島歷險記": "attraction/257", "奇妙仙子妙妙小車": "attraction/258", "樂佩公主天燈盛會": "attraction/256", "沙漠商隊旋轉木馬": "attraction/236", "茉莉公主的飛天魔毯": "attraction/220", "辛巴達傳奇之旅": "attraction/235", "神燈劇場": "attraction/226", "艾莉兒遊樂場": "attraction/202", "跳躍水母": "attraction/239", "史卡托的寄居蟹": "attraction/238", "小胖的飛魚雲霄飛車": "attraction/237", "河豚氣球競賽": "attraction/240", "美人魚礁湖劇場「川頓王的音樂會」": "attraction/221", "旋轉海藻杯": "attraction/241", "海底兩萬哩": "attraction/224", "地心探險之旅": "attraction/223", "眾彩滿夜空": "show/7801", "閃耀歡騰慶典": "show/7404", "【情境營造】閃耀歡騰之夜": "show/7405", "堅信！～夢想之海～": "show/967", "達菲與好友的非凡友誼": "show/7601", "舞動全球！": "show/7604", "夢想起飛": "show/7602"}, "land": {"迪士尼眾彩交融": "show/7000", "電子大遊行～夢之光": "show/913", "眾彩滿夜空": "show/7800", "米奇樂跳跳！同歡共舞！": "show/985", "米奇七彩晚宴": "show/970", "鑽石綜藝總匯": "show/7200", "米奇魔法音樂世界": "show/895", "The D-Groovationz4 Live": "show/7204"}};
 const dzPhoto=(park,n)=>{const p=DZOFF[park][n];if(p){const [k,id]=p.split("/");return `https://www.tokyodisneyresort.jp/tc/${park==="land"?"tdl":"tds"}/${k}/detail/${id}/`}return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent((park==="land"?"東京迪士尼樂園 ":"東京迪士尼海洋 ")+n)};
 
-const dzPark = d => /迪士尼海洋|DisneySea/i.test(d.title) ? 'sea' : /迪士尼樂園|Disneyland/i.test(d.title) ? 'land' : '';
+const dzPark = d => parkOf(d);
 const dzHash = str => { let h = 5381; for (const c of str) h = ((h << 5) + h + c.codePointAt(0)) >>> 0; return h.toString(36); };
 const dzDoc = id => (id.startsWith('sea|') ? 'sea-' : 'land-') + dzHash(id);
 let dzPick = {}, dzF = 'all', dzMsg = '';
@@ -1038,6 +1062,7 @@ document.addEventListener('click', async e => {
 });
 
 render();
+if (swapLocal) saveLocal();
 initCloud();
 if (!FIREBASE.projectId) setStatus('尚未設定雲端同步，修改只會存在這支手機');
 
